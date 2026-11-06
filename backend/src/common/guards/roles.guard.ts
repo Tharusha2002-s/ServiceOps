@@ -1,0 +1,35 @@
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { RoleName } from '@prisma/client';
+import { ROLES_KEY } from '../decorators/roles.decorator';
+
+@Injectable()
+export class RolesGuard implements CanActivate {
+  constructor(private reflector: Reflector) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    const requiredRoles = this.reflector.getAllAndOverride<RoleName[]>(ROLES_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (!requiredRoles || requiredRoles.length === 0) {
+      return true; // No role restriction specified
+    }
+
+    const { user } = context.switchToHttp().getRequest();
+
+    if (!user || !user.roles) {
+      throw new ForbiddenException('Access denied: User roles could not be resolved');
+    }
+
+    const hasRole = requiredRoles.some((role) => user.roles.includes(role));
+    if (!hasRole) {
+      throw new ForbiddenException(
+        `Access denied: Requires one of [${requiredRoles.join(', ')}]. Current roles: [${user.roles.join(', ')}]`,
+      );
+    }
+
+    return true;
+  }
+}
