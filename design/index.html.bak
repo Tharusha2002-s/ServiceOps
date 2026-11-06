@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ServiceOps — Interface design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,520;9..144,620&family=IBM+Plex+Mono:wght@450;500&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #1c1915;
+    --ink-soft: #4a453e;
+    --muted: #6f685e;
+    --line: #e4ddd2;
+    --line-strong: #d4cdc1;
+    --paper: #f3efe6;
+    --card: #fbf9f4;
+    --card-2: #f7f3eb;
+    --rail: #1c1915;
+    --rail-2: #2a261f;
+    --rail-text: #f4efe6;
+    --rail-muted: #c9c1b4;
+    --copper: #8e3f1e;
+    --copper-ink: #f8f1ea;
+    --moss: #1f5c40;
+    --moss-bg: #e5f0ea;
+    --amber: #8a5a10;
+    --amber-bg: #f8efd8;
+    --rose: #8d2e2e;
+    --rose-bg: #f8e6e3;
+    --sky: #234e68;
+    --sky-bg: #e5eef3;
+    --shadow: none;
+    --serif: "Fraunces", "Iowan Old Style", Georgia, serif;
+    --sans: "Outfit", "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", "Cascadia Mono", ui-monospace, monospace;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--paper);
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  h1, h2, h3, p { margin: 0; }
+  a { color: var(--copper); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .proto {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 16px;
+    background: #11100e;
+    color: #f4efe6;
+    border-bottom: 1px solid #2c2822;
+  }
+  .proto-mark {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #c9c1b4;
+    white-space: nowrap;
+  }
+  .proto select, .roles button {
+    background: #24211c;
+    color: #f4efe6;
+    border: 1px solid #3a342c;
+    border-radius: 8px;
+    padding: 6px 10px;
+  }
+  .proto select { min-width: 220px; }
+  .roles { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+  .roles button[aria-pressed="true"] {
+    background: var(--copper);
+    border-color: var(--copper);
+    color: white;
+  }
+  .screen { display: none; }
+  .screen.is-on { display: block; }
+  #app.screen.is-on { display: grid; grid-template-columns: 248px 1fr; min-height: calc(100vh - 45px); }
+
+  .auth {
+    min-height: calc(100vh - 45px);
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+  }
+  .auth-story {
+    background: var(--rail);
+    color: var(--rail-text);
+    padding: 56px 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 32px;
+  }
+  .brand-row { display: flex; align-items: center; gap: 10px; color: var(--rail-muted); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; font-family: var(--mono); }
+  .mark {
+    width: 22px; height: 22px; border: 1.5px solid #f4efe6; border-radius: 6px;
+    display: grid; place-items: center;
+  }
+  .mark i { width: 8px; height: 8px; background: #e7b08a; display: block; }
+  .auth-story h1 {
+    font-family: var(--serif);
+    font-size: 56px;
+    font-weight: 520;
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    max-width: 12ch;
+    margin-top: 28px;
+  }
+  .auth-story .lede { max-width: 42ch; color: var(--rail-muted); font-size: 17px; margin-top: 18px; }
+  .flow { list-style: none; padding: 0; margin: 36px 0 0; display: grid; gap: 10px; max-width: 460px; }
+  .flow li { display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: baseline; }
+  .flow b { font-family: var(--mono); font-weight: 450; color: #e7b08a; font-size: 12px; }
+  .auth-foot { color: var(--rail-muted); font-size: 13px; }
+  .auth-panel { display: grid; place-items: center; padding: 40px 24px; }
+  .auth-card { width: min(420px, 100%); }
+  .auth-card h2 { font-family: var(--serif); font-size: 32px; font-weight: 520; letter-spacing: -0.02em; }
+  .auth-card .sub { color: var(--ink-soft); margin: 8px 0 28px; }
+  label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+  .field { margin-bottom: 14px; }
+  .field input, .field textarea, .field select, .control, .search input {
+    width: 100%;
+    background: white;
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    padding: 11px 12px;
+    outline: none;
+  }
+  .field textarea { min-height: 120px; resize: vertical; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .row-between { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border-radius: 10px; border: 1px solid transparent; padding: 10px 14px; background: transparent;
+  }
+  .btn-primary { background: var(--copper); color: white; }
+  .btn-primary:hover { background: #7a3518; }
+  .btn-ghost { border-color: var(--line-strong); background: transparent; }
+  .btn-ghost:hover { background: white; }
+  .btn-block { width: 100%; }
+  .btn:focus-visible, .roles button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: 2px solid #8e3f1e; outline-offset: 2px;
+  }
+
+  .rail {
+    background: var(--rail);
+    color: var(--rail-text);
+    padding: 20px 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    position: sticky;
+    top: 45px;
+    height: calc(100vh - 45px);
+  }
+  .rail-brand { display: flex; gap: 10px; align-items: center; padding: 0 8px; }
+  .rail-brand strong { display: block; font-size: 16px; font-weight: 600; }
+  .rail-brand span { display: block; color: var(--rail-muted); font-size: 12px; }
+  nav { display: grid; gap: 4px; }
+  nav button {
+    text-align: left;
+    background: transparent;
+    color: var(--rail-muted);
+    border: 0;
+    border-radius: 9px;
+    padding: 9px 10px;
+  }
+  nav button[aria-current="page"] { background: var(--rail-2); color: var(--rail-text); }
+  nav button:hover { color: var(--rail-text); }
+  .who {
+    margin-top: auto;
+    padding: 12px;
+    border-top: 1px solid #322e28;
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 10px;
+    align-items: center;
+  }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: #3a3028; color: #f4efe6; font-size: 12px; font-weight: 600;
+  }
+  .who small { color: var(--rail-muted); display: block; }
+
+  .workspace { min-width: 0; }
+  .top {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(243, 239, 230, 0.92);
+    position: sticky; top: 45px; z-index: 5;
+  }
+  .search { position: relative; flex: 1; max-width: 560px; }
+  .search input { background: white; }
+  .search-pop {
+    position: absolute; left: 0; right: 0; top: calc(100% + 6px);
+    background: white; border: 1px solid var(--line); border-radius: 12px; padding: 8px;
+    display: none;
+  }
+  .search:focus-within .search-pop { display: block; }
+  .search-pop button {
+    width: 100%; text-align: left; background: transparent; border: 0; border-radius: 8px; padding: 8px 10px;
+    display: flex; justify-content: space-between; gap: 12px;
+  }
+  .search-pop button:hover { background: var(--card-2); }
+  .top-meta { margin-left: auto; display: flex; align-items: center; gap: 10px; color: var(--ink-soft); font-size: 13px; }
+  .live { display: flex; align-items: center; gap: 6px; }
+  .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--moss); display: block; }
+  .icon-btn {
+    position: relative; border: 1px solid var(--line-strong); background: white; border-radius: 10px; padding: 8px 10px;
+  }
+  .badge {
+    position: absolute; top: -6px; right: -6px;
+    background: var(--copper); color: white; border-radius: 99px;
+    font-size: 11px; min-width: 16px; height: 16px; display: grid; place-items: center; padding: 0 4px;
+  }
+  main { padding: 28px 32px 64px; max-width: 1240px; }
+  .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .page-title { font-family: var(--serif); font-weight: 520; font-size: 36px; letter-spacing: -0.03em; line-height: 1.1; margin: 6px 0 8px; }
+  .page-sub { color: var(--ink-soft); max-width: 62ch; }
+  .head-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 22px; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 8px 0 22px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+  .stat span { color: var(--muted); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .stat strong { display: block; font-family: var(--serif); font-size: 32px; font-weight: 520; letter-spacing: -0.03em; margin-top: 4px; }
+  .stat em { font-style: normal; color: var(--ink-soft); font-size: 13px; }
+  .stat.warn strong { color: var(--rose); }
+  .stat.good strong { color: var(--moss); }
+
+  .split { display: grid; grid-template-columns: 1.4fr 0.8fr; gap: 16px; align-items: start; }
+  .split-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+  .card h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+  .stack { display: grid; gap: 10px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  td { padding: 12px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover td { background: #f7f3eb; }
+  .mono { font-family: var(--mono); font-size: 12px; }
+  .subject { font-weight: 550; }
+
+  .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 99px; padding: 3px 8px; font-size: 12px; font-weight: 500; background: var(--card-2); }
+  .pill.progress { background: var(--sky-bg); color: var(--sky); }
+  .pill.open { background: var(--amber-bg); color: var(--amber); }
+  .pill.pending { background: #eeeae3; color: var(--ink-soft); }
+  .pill.resolved { background: var(--moss-bg); color: var(--moss); }
+  .pill.closed { background: #eceae6; color: var(--muted); }
+  .pill.new { background: #f3e6dc; color: var(--copper); }
+  .pill.critical, .sev-critical { background: var(--rose-bg); color: var(--rose); }
+  .pill.high { background: #f8eadc; color: #8a3e12; }
+  .pill.medium { background: var(--amber-bg); color: var(--amber); }
+  .pill.low { background: var(--card-2); color: var(--ink-soft); }
+  .pill.breach { background: var(--rose-bg); color: var(--rose); }
+  .pill.risk { background: var(--amber-bg); color: var(--amber); }
+  .pill.ok { background: var(--moss-bg); color: var(--moss); }
+  .pill.pause { background: #eeeae3; color: var(--ink-soft); }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .filters button, .seg button {
+    border: 1px solid var(--line-strong); background: transparent; border-radius: 99px; padding: 6px 10px; font-size: 13px;
+  }
+  .filters button[aria-pressed="true"], .seg button[aria-pressed="true"], .tabs button[aria-pressed="true"] { background: var(--ink); color: white; border-color: var(--ink); }
+  tr.clickable:focus-visible { outline: 2px solid var(--copper); outline-offset: -2px; }
+
+  .cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .cat {
+    text-align: left; border: 1px solid var(--line); background: white; border-radius: 12px; padding: 12px;
+  }
+  .cat[aria-pressed="true"] { border-color: var(--copper); background: #fbf4ee; }
+  .cat strong { display: block; }
+  .cat span { color: var(--muted); font-size: 12px; }
+
+  .drop {
+    border: 1px dashed var(--line-strong); border-radius: 12px; padding: 18px; text-align: center; color: var(--ink-soft); background: white;
+  }
+
+  .layout-ticket { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+  .thread { display: grid; gap: 12px; }
+  .msg { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: white; }
+  .msg header { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+  .msg.internal { background: #f8f1e4; border-color: #eadcc4; }
+  .composer { display: grid; gap: 8px; margin-top: 8px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .meta-list { display: grid; gap: 10px; }
+  .meta-list div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+  .meta-list dt { color: var(--muted); }
+  .sla-track { height: 6px; background: #e7e1d6; border-radius: 99px; overflow: hidden; margin: 8px 0; }
+  .sla-track span { display: block; height: 100%; width: 72%; background: var(--moss); }
+  .sla-track.risk span { width: 88%; background: var(--amber); }
+  .sla-track.breach span { width: 100%; background: var(--rose); }
+  .timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  .timeline li { display: grid; grid-template-columns: 12px 1fr; gap: 10px; font-size: 13px; }
+  .timeline i { width: 8px; height: 8px; border-radius: 50%; background: var(--copper); margin-top: 6px; }
+
+  .lane h3 { display: flex; justify-content: space-between; align-items: baseline; }
+  .lane h3 span { font-weight: 500; color: var(--muted); font-size: 12px; }
+  .tcard { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: white; text-align: left; width: 100%; }
+  .tcard + .tcard { margin-top: 8px; }
+  .tcard:hover { border-color: var(--line-strong); }
+
+  .bars { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; align-items: end; height: 160px; }
+  .bar-col { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; height: 100%; }
+  .pair { display: flex; gap: 3px; align-items: flex-end; height: 130px; }
+  .pair i { display: block; width: 8px; border-radius: 3px 3px 0 0; }
+  .pair .o { background: #1c1915; }
+  .pair .r { background: #c47a52; }
+  .bar-col em { font-style: normal; font-size: 10px; color: var(--muted); }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+  .legend b { display: inline-block; width: 8px; height: 8px; margin-right: 6px; }
+  .load { display: grid; gap: 8px; }
+  .load div { display: grid; grid-template-columns: 110px 1fr 24px; gap: 8px; align-items: center; font-size: 13px; }
+  .track { height: 8px; background: #ece7de; border-radius: 99px; }
+  .track span { display: block; height: 100%; background: var(--ink); border-radius: 99px; }
+
+  .policy { display: grid; grid-template-columns: 1.2fr repeat(3, 1fr); gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: center; }
+  .note {
+    background: #f8f1e4; border: 1px solid #eadcc4; border-radius: 12px; padding: 12px 14px; color: #5c4528; font-size: 13px;
+  }
+  .banner {
+    display: flex; justify-content: space-between; gap: 12px; align-items: center;
+    background: var(--moss-bg); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;
+  }
+  .denied { max-width: 520px; padding-top: 40px; }
+  .article { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .inbox-item { display: grid; grid-template-columns: 10px 1fr auto; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: start; }
+  .inbox-item .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--copper); margin-top: 6px; }
+  .inbox-item.read .dot { background: transparent; border: 1px solid var(--line-strong); }
+
+  @media (max-width: 980px) {
+    #app.screen.is-on { grid-template-columns: 1fr; }
+    .rail { position: relative; top: 0; height: auto; }
+    .auth { grid-template-columns: 1fr; }
+    .auth-story { padding: 32px 24px; }
+    .auth-story h1 { font-size: 40px; }
+    .stats, .cats, .split, .split-3, .layout-ticket { grid-template-columns: 1fr; }
+    main { padding: 20px 16px 48px; }
+    .top { padding: 12px 16px; }
+    .proto { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body data-role="employee" data-screen="login">
+  <div class="proto">
+    <div class="proto-mark">Design prototype</div>
+    <label class="sr" for="screen-jump" style="position:absolute;left:-999px">Screen</label>
+    <select id="screen-jump" aria-label="Jump to screen"></select>
+    <div class="roles" role="group" aria-label="Preview as">
+      <button type="button" data-role="employee" aria-pressed="true">Employee</button>
+      <button type="button" data-role="agent" aria-pressed="false">Agent</button>
+      <button type="button" data-role="manager" aria-pressed="false">Manager</button>
+      <button type="button" data-role="admin" aria-pressed="false">Administrator</button>
+    </div>
+  </div>
+
+  <section id="login" class="screen is-on" data-screen="login">
+    <div class="auth">
+      <div class="auth-story">
+        <div>
+          <div class="brand-row"><span class="mark"><i></i></span> ServiceOps</div>
+          <h1>One desk for every request, incident, and deadline.</h1>
+          <p class="lede">Employees ask for help in one place. The IT team assigns, investigates, and closes the work without losing the history.</p>
+          <ol class="flow">
+            <li><b>01</b><span>Submit a request with the category, urgency, and anything the agent will need.</span></li>
+            <li><b>02</b><span>A manager or rule gives the ticket an owner. The SLA clock starts with the policy that applied at that moment.</span></li>
+            <li><b>03</b><span>The agent investigates, writes to the employee, and keeps internal notes off the public thread.</span></li>
+            <li><b>04</b><span>Resolution is recorded. The employee confirms, and the ticket closes.</span></li>
+            <li><b>05</b><span>Deadlines, breaches, and privileged changes stay on the record.</span></li>
+          </ol>
+        </div>
+        <div class="auth-foot">Northwind Internal IT · Colombo · Thursday 5 November 2026</div>
+      </div>
+      <div class="auth-panel">
+        <form class="auth-card" id="signin-form">
+          <h2>Sign in</h2>
+          <p class="sub">Use your work email. New accounts receive the Employee role.</p>
+          <div class="field">
+            <label for="email">Work email</label>
+            <input id="email" name="email" type="email" autocomplete="username" value="amina.perera@northwind.example" required />
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" value="••••••••" required />
+          </div>
+          <div class="row-between" style="margin-bottom:16px">
+            <span class="hint" style="margin:0">Session stays on this browser until you sign out.</span>
+            <button type="button" class="btn" id="goto-reset" style="padding:0;color:var(--copper)">Forgot password</button>
+          </div>
+          <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+          <p class="hint">The role control above chooses which desk this preview opens. It is not part of the product form.</p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section id="reset" class="screen" data-screen="reset">
+    <div class="auth">
+      <div class="auth-story">
+        <div>
+          <div class="brand-row"><span class="mark"><i></i></span> ServiceOps</div>
+          <h1>Reset access without exposing the account.</h1>
+          <p class="lede">If the email matches an active account, a single-use link is sent. The screen does not say whether the address exists.</p>
+        </div>
+        <div class="auth-foot">Links expire after 30 minutes and can be used once.</div>
+      </div>
+      <div class="auth-panel">
+        <form class="auth-card" id="reset-form">
+          <h2>Forgot password</h2>
+          <p class="sub">We will email a reset link if an active account uses this address.</p>
+          <div class="field">
+            <label for="reset-email">Work email</label>
+            <input id="reset-email" type="email" required placeholder="name@northwind.example" />
+          </div>
+          <button class="btn btn-primary btn-block" type="submit">Send reset link</button>
+          <p id="reset-done" class="hint" hidden>If an account exists for that email, a reset link is on its way.</p>
+          <p style="margin-top:16px"><button type="button" class="btn" id="back-login" style="padding:0;color:var(--copper)">Back to sign in</button></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <div id="app" class="screen" data-screen="app">
+    <aside class="rail">
+      <div class="rail-brand">
+        <span class="mark"><i></i></span>
+        <div><strong>ServiceOps</strong><span>Northwind Internal IT</span></div>
+      </div>
+      <nav id="nav" aria-label="Primary"></nav>
+      <div class="who">
+        <div class="avatar" id="avatar">AP</div>
+        <div><strong id="who-name">Amina Perera</strong><small id="who-role">Employee · Finance</small></div>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="top">
+        <div class="search">
+          <label class="sr" for="q" style="position:absolute;left:-999px">Search</label>
+          <input id="q" placeholder="Search tickets, incidents, people" />
+          <div class="search-pop" role="listbox">
+            <button type="button" data-go="ticket"><span><b class="mono">TKT-1042</b> Laptop dock not charging</span><span class="hint">Ticket</span></button>
+            <button type="button" data-go="incident"><span><b class="mono">INC-208</b> Login failures</span><span class="hint">Incident</span></button>
+            <button type="button" data-go="people"><span>R. Chen</span><span class="hint">Agent</span></button>
+          </div>
+        </div>
+        <div class="top-meta">
+          <span class="live"><i></i> Desk live</span>
+          <span>Colombo · 14:10</span>
+          <button class="icon-btn" type="button" data-go="notifications" aria-label="Notifications">Inbox <span class="badge">3</span></button>
+          <button class="icon-btn" type="button" id="signout">Sign out</button>
+        </div>
+      </header>
+      <main>
+
+        <section class="view" data-view="home" data-for="employee">
+          <div class="head-row">
+            <div>
+              <div class="kicker">Thursday 5 November</div>
+              <h1 class="page-title">Good afternoon, Amina.</h1>
+              <p class="page-sub">Three requests are still open. One is waiting for you to confirm the printer fix.</p>
+            </div>
+            <button class="btn btn-primary" type="button" data-go="new">New request</button>
+          </div>
+          <div class="stats">
+            <div class="stat"><span>Open</span><strong>3</strong><em>Owned by you</em></div>
+            <div class="stat"><span>Waiting on you</span><strong>1</strong><em>Confirm resolution</em></div>
+            <div class="stat good"><span>Resolved this month</span><strong>8</strong><em>Closed after confirmation</em></div>
+            <div class="stat"><span>Avg. first response</span><strong>38m</strong><em>On your tickets</em></div>
+          </div>
+          <div class="split">
+            <div class="card">
+              <h3>Your requests</h3>
+              <table>
+                <thead><tr><th>Ticket</th><th>Status</th><th>SLA</th></tr></thead>
+                <tbody>
+                  <tr class="clickable" data-go="ticket"><td><div class="mono">TKT-1042</div><div class="subject">Laptop dock not charging</div></td><td><span class="pill progress">In progress</span></td><td><span class="pill ok">2h 10m left</span></td></tr>
+                  <tr class="clickable" data-go="ticket"><td><div class="mono">TKT-1031</div><div class="subject">New starter email access</div></td><td><span class="pill pending">Pending</span></td><td><span class="pill pause">Paused</span></td></tr>
+                  <tr class="clickable" data-go="ticket"><td><div class="mono">TKT-1022</div><div class="subject">Printer jam, 3rd floor</div></td><td><span class="pill resolved">Resolved</span></td><td><span class="pill ok">Met</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="stack">
+              <div class="card">
+                <h3>Start with a category</h3>
+                <div class="stack">
+                  <button class="cat" type="button" data-go="new"><strong>Hardware</strong><span>Laptops, docks, printers</span></button>
+                  <button class="cat" type="button" data-go="new"><strong>Access</strong><span>Accounts, mail, VPN</span></button>
+                  <button class="cat" type="button" data-go="new"><strong>Software</strong><span>Installs and licenses</span></button>
+                  <button class="cat" type="button" data-go="new"><strong>Network</strong><span>Wi-Fi, floors, outages</span></button>
+                </div>
+              </div>
+              <div class="note">Internal notes from agents never appear on this desk. You only see comments written for you.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" data-view="home" data-for="agent">
+          <div class="head-row">
+            <div>
+              <div class="kicker">Agent queue · R. Chen</div>
+              <h1 class="page-title">Seven tickets on your desk.</h1>
+              <p class="page-sub">One response target is already breached. Two resolutions fall inside the next two hours.</p>
+            </div>
+            <button class="btn btn-ghost" type="button" data-go="incidents">Open incidents</button>
+          </div>
+          <div class="stats">
+            <div class="stat"><span>Assigned</span><strong>7</strong><em>Active work</em></div>
+            <div class="stat warn"><span>Breached</span><strong>1</strong><em>Needs escalation</em></div>
+            <div class="stat"><span>Due soon</span><strong>2</strong><em>Under 2 hours</em></div>
+            <div class="stat good"><span>Responded today</span><strong>5</strong><em>First response met</em></div>
+          </div>
+          <div class="split-3">
+            <div class="card lane">
+              <h3>Breached <span>1</span></h3>
+              <button class="tcard" type="button" data-go="ticket"><div class="mono">TKT-1038</div><div class="subject">VPN drops on floor 4</div><div style="margin-top:8px"><span class="pill breach">Response breached 26m</span></div></button>
+            </div>
+            <div class="card lane">
+              <h3>Due soon <span>2</span></h3>
+              <button class="tcard" type="button" data-go="ticket"><div class="mono">TKT-1042</div><div class="subject">Laptop dock not charging</div><div style="margin-top:8px"><span class="pill risk">Resolve by 17:14</span></div></button>
+              <button class="tcard" type="button" data-go="ticket"><div class="mono">TKT-1048</div><div class="subject">Shared mailbox missing</div><div style="margin-top:8px"><span class="pill risk">Respond in 40m</span></div></button>
+            </div>
+            <div class="card lane">
+              <h3>On track <span>4</span></h3>
+              <button class="tcard" type="button" data-go="ticket"><div class="mono">TKT-1031</div><div class="subject">New starter email access</div><div style="margin-top:8px"><span class="pill pause">Paused · waiting</span></div></button>
+              <button class="tcard" type="button" data-go="ticket"><div class="mono">TKT-1016</div><div class="subject">Install design suite</div><div style="margin-top:8px"><span class="pill ok">18h left</span></div></button>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" data-view="home" data-for="manager">
+          <div class="head-row">
+            <div>
+              <div class="kicker">Operations · 5 November</div>
+              <h1 class="page-title">The desk is holding, except floor 4.</h1>
+              <p class="page-sub">SLA compliance is 94% this week. One critical incident is still in investigation, and three tickets have no owner.</p>
+            </div>
+            <button class="btn btn-primary" type="button" data-go="assignment">Assign unowned work</button>
+          </div>
+          <div class="stats">
+            <div class="stat"><span>Open tickets</span><strong>42</strong><em>Organization</em></div>
+            <div class="stat warn"><span>SLA breached</span><strong>3</strong><em>Open breaches</em></div>
+            <div class="stat"><span>Median response</span><strong>41m</strong><em>Last 7 days</em></div>
+            <div class="stat good"><span>Compliance</span><strong>94%</strong><em>Response + resolution</em></div>
+          </div>
+          <div class="split">
+            <div class="card">
+              <h3>Opened and resolved</h3>
+              <div class="bars" aria-label="Tickets opened and resolved per day, 27 October to 5 November 2026">
+                <div class="bar-col"><div class="pair"><i class="o" style="height:72px"></i><i class="r" style="height:40px"></i></div><em>27</em></div>
+                <div class="bar-col"><div class="pair"><i class="o" style="height:54px"></i><i class="r" style="height:60px"></i></div><em>28</em></div>
+                <div class="bar-col"><div class="pair"><i class="o" style="height:90px"></i><i class="r" style="height:48px"></i></div><em>29</em></div>
+                <div class="bar-col"><div class="pair"><i class="o" style="height:40px"></i><i class="r" style="height:44px"></i></div><em>30</em></div>
+                <div class="bar-col"><div class="pair"><i class="o" style="height:28px"></i><i class="r" style="height:22px"></i></div><em>31</em></div>
+                <div class="bar-col"><div class="pair"><i class="o" style="height:20px"></i><i class="r" style="height:18px"></i></div><em>01</em></div>
+                <div class="bar-col"><div class="pair"><i class="o" style="height:18px"></i><i class="r" style="height:16px"></i></div><em>02</em></div>
+                <div class="bar-col"><div class="pair"><i class="o" style="height:84px"></i><i class="r" style="height:50px"></i></div><em>03</em></div>
+                <div class="bar-col"><div class="pair"><i class="o" style="height:66px"></i><i class="r" style="height:70px"></i></div><em>04</em></div>
+                <div class="bar-col"><div class="pair"><i class="o" style="height:48px"></i><i class="r" style="height:30px"></i></div><em>05</em></div>
+              </div>
+              <div class="legend"><span><b style="background:#1c1915"></b>Opened</span><span><b style="background:#c47a52"></b>Resolved</span></div>
+              <p class="hint">Sample scenario for the Northwind design. Counts are tickets per day.</p>
+            </div>
+            <div class="card">
+              <h3>Agent workload</h3>
+              <div class="load">
+                <div><span>R. Chen</span><div class="track"><span style="width:92%"></span></div><b>11</b></div>
+                <div><span>N. Silva</span><div class="track"><span style="width:66%"></span></div><b>8</b></div>
+                <div><span>P. Dias</span><div class="track"><span style="width:50%"></span></div><b>6</b></div>
+                <div><span>A. Rahman</span><div class="track"><span style="width:34%"></span></div><b>4</b></div>
+              </div>
+              <p class="hint" style="margin-top:12px">Open assigned tickets. Chen is over the soft cap of 8.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" data-view="home" data-for="admin">
+          <div class="head-row">
+            <div>
+              <div class="kicker">Platform</div>
+              <h1 class="page-title">Accounts, configuration, and the audit trail.</h1>
+              <p class="page-sub">128 people can sign in. Three accounts are locked after repeated failures. This morning’s backup completed at 04:10.</p>
+            </div>
+            <button class="btn btn-primary" type="button" data-go="people">Manage people</button>
+          </div>
+          <div class="stats">
+            <div class="stat"><span>Active accounts</span><strong>128</strong><em>1 organization</em></div>
+            <div class="stat warn"><span>Locked</span><strong>3</strong><em>Failed sign-in throttle</em></div>
+            <div class="stat"><span>Audit events today</span><strong>46</strong><em>Append-only</em></div>
+            <div class="stat good"><span>Last backup</span><strong>04:10</strong><em>Off-server copy</em></div>
+          </div>
+          <div class="split">
+            <div class="card">
+              <h3>Recent privileged actions</h3>
+              <table>
+                <thead><tr><th>When</th><th>Actor</th><th>Action</th></tr></thead>
+                <tbody>
+                  <tr><td class="mono">14:02</td><td>K. Fernando</td><td>Assigned TKT-1038 to N. Silva</td></tr>
+                  <tr><td class="mono">11:20</td><td>S. Jayawardena</td><td>Granted Agent to P. Dias</td></tr>
+                  <tr><td class="mono">09:05</td><td>S. Jayawardena</td><td>Locked account after 8 failures</td></tr>
+                </tbody>
+              </table>
+              <p style="margin-top:12px"><button class="btn btn-ghost" type="button" data-go="audit">Open audit log</button></p>
+            </div>
+            <div class="stack">
+              <button class="card cat" type="button" data-go="categories"><strong>Categories</strong><span>4 active service lines</span></button>
+              <button class="card cat" type="button" data-go="sla"><strong>SLA policies</strong><span>Priority targets and business hours</span></button>
+              <button class="card cat" type="button" data-go="settings"><strong>Organization settings</strong><span>Timezone, retention, email sender</span></button>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" data-view="tickets">
+          <div class="head-row">
+            <div>
+              <div class="kicker" id="tickets-kicker">Requests</div>
+              <h1 class="page-title" id="tickets-title">My requests</h1>
+              <p class="page-sub" id="tickets-sub">Everything you have submitted, including closed work kept for history.</p>
+            </div>
+            <button class="btn btn-primary" type="button" data-go="new" data-for="employee">New request</button>
+          </div>
+          <div class="filters" role="group" aria-label="Filter tickets">
+            <button type="button" aria-pressed="true">All open</button>
+            <button type="button" aria-pressed="false">Waiting</button>
+            <button type="button" aria-pressed="false">Resolved</button>
+            <button type="button" aria-pressed="false">Breached</button>
+            <button type="button" aria-pressed="false">Unassigned</button>
+          </div>
+          <div class="card" style="padding:8px 8px 0">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ticket</th><th>Category</th><th>Priority</th><th>Status</th><th data-for="agent manager admin">Assignee</th><th>SLA</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="clickable" data-go="ticket">
+                  <td><div class="mono">TKT-1042</div><div class="subject">Laptop dock not charging</div></td>
+                  <td>Hardware</td><td><span class="pill high">High</span></td><td><span class="pill progress">In progress</span></td>
+                  <td data-for="agent manager admin">R. Chen</td><td><span class="pill ok">On track</span></td>
+                </tr>
+                <tr class="clickable" data-go="ticket">
+                  <td><div class="mono">TKT-1038</div><div class="subject">VPN drops on floor 4</div></td>
+                  <td>Network</td><td><span class="pill critical">Critical</span></td><td><span class="pill open">Open</span></td>
+                  <td data-for="agent manager admin">Unassigned</td><td><span class="pill breach">Breached</span></td>
+                </tr>
+                <tr class="clickable" data-go="ticket">
+                  <td><div class="mono">TKT-1031</div><div class="subject">New starter email access</div></td>
+                  <td>Access</td><td><span class="pill medium">Medium</span></td><td><span class="pill pending">Pending</span></td>
+                  <td data-for="agent manager admin">N. Silva</td><td><span class="pill pause">Paused</span></td>
+                </tr>
+                <tr class="clickable" data-go="ticket">
+                  <td><div class="mono">TKT-1022</div><div class="subject">Printer jam, 3rd floor</div></td>
+                  <td>Hardware</td><td><span class="pill low">Low</span></td><td><span class="pill resolved">Resolved</span></td>
+                  <td data-for="agent manager admin">R. Chen</td><td><span class="pill ok">Met</span></td>
+                </tr>
+                <tr class="clickable" data-go="ticket">
+                  <td><div class="mono">TKT-0994</div><div class="subject">Shared mailbox password</div></td>
+                  <td>Access</td><td><span class="pill medium">Medium</span></td><td><span class="pill closed">Closed</span></td>
+                  <td data-for="agent manager admin">P. Dias</td><td><span class="pill ok">Met</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="view" data-view="new" data-for="employee">
+          <div class="head-row">
+            <div>
+              <div class="kicker">New request</div>
+              <h1 class="page-title">What do you need from IT?</h1>
+              <p class="page-sub">A ticket number is issued when you submit. Priority can be adjusted by the service desk if the impact is wider than it looks.</p>
+            </div>
+          </div>
+          <div class="split">
+            <form class="card stack" id="new-ticket">
+              <div>
+                <label>Category</label>
+                <div class="cats" style="margin-top:8px">
+                  <button class="cat" type="button" aria-pressed="true"><strong>Hardware</strong><span>Devices and desks</span></button>
+                  <button class="cat" type="button" aria-pressed="false"><strong>Access</strong><span>Accounts</span></button>
+                  <button class="cat" type="button" aria-pressed="false"><strong>Software</strong><span>Apps</span></button>
+                  <button class="cat" type="button" aria-pressed="false"><strong>Network</strong><span>Connectivity</span></button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="subject">Subject</label>
+                <input id="subject" required value="Laptop dock not charging" />
+              </div>
+              <div class="field">
+                <label for="desc">What happened</label>
+                <textarea id="desc">The dock light is amber. The laptop battery drains while it is seated. This started after the desk move on Tuesday.</textarea>
+                <p class="hint">Include the floor, the device, and when it last worked.</p>
+              </div>
+              <div class="field">
+                <label for="urgency">How urgent is this for your work</label>
+                <select id="urgency">
+                  <option>Low · I can wait</option>
+                  <option selected>High · I am blocked today</option>
+                  <option>Critical · A team or service is down</option>
+                </select>
+              </div>
+              <div class="drop">Drop a photo or PDF, or browse. PNG, JPG, and PDF up to 10 MB.</div>
+              <div class="row-between">
+                <span class="hint" id="new-result">You can leave this page. Nothing is submitted until you confirm.</span>
+                <button class="btn btn-primary" type="submit">Submit request</button>
+              </div>
+            </form>
+            <aside class="card">
+              <h3>SLA that will apply</h3>
+              <p class="mono">Hardware · High</p>
+              <div class="meta-list" style="margin-top:12px">
+                <div><dt>First response</dt><dd>1 hour</dd></div>
+                <div><dt>Resolution</dt><dd>8 business hours</dd></div>
+                <div><dt>Clock</dt><dd>Mon–Fri 08:00–18:00</dd></div>
+                <div><dt>Timezone</dt><dd>Asia/Colombo</dd></div>
+              </div>
+              <p class="hint" style="margin-top:12px">The deadlines are stored with this ticket. Later edits to the policy do not rewrite them.</p>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" data-view="ticket">
+          <div class="head-row">
+            <div>
+              <div class="kicker mono">TKT-1042 · Hardware</div>
+              <h1 class="page-title">Laptop dock not charging</h1>
+              <p class="page-sub">Opened by Amina Perera · 4 November 09:14 · Finance, level 2</p>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <span class="pill high">High</span>
+              <span class="pill progress">In progress</span>
+            </div>
+          </div>
+          <div class="banner" data-for="employee">
+            <div><strong>R. Chen is bringing a spare dock this afternoon.</strong><div class="hint">You will be asked to confirm once the ticket is marked resolved.</div></div>
+          </div>
+          <div class="layout-ticket">
+            <div>
+              <div class="tabs" role="tablist">
+                <button class="btn btn-ghost" type="button" id="tab-talk" aria-pressed="true">Conversation</button>
+                <button class="btn btn-ghost" type="button" id="tab-time" aria-pressed="false">Activity</button>
+              </div>
+              <div id="pane-talk">
+                <div class="thread">
+                  <article class="msg">
+                    <header><strong>Amina Perera</strong><span class="hint">4 Nov · 09:14 · Public</span></header>
+                    <p>The dock light is amber and the laptop battery drains while seated. Started after the desk move on Tuesday.</p>
+                  </article>
+                  <article class="msg">
+                    <header><strong>R. Chen</strong><span class="hint">4 Nov · 09:52 · Public</span></header>
+                    <p>The dock is on 2022 firmware. I will bring a spare to Finance this afternoon and swap it at the desk.</p>
+                  </article>
+                  <article class="msg internal" data-for="agent manager admin">
+                    <header><strong>R. Chen</strong><span class="hint">4 Nov · 09:54 · Internal note</span></header>
+                    <p>Spare docks are in cabinet B. Machine is a Dell Latitude 5440. Do not send this note to the employee.</p>
+                  </article>
+                </div>
+                <form class="composer card" style="margin-top:12px">
+                  <label for="reply">Add to the thread</label>
+                  <textarea id="reply" placeholder="Write a reply the requester can read"></textarea>
+                  <div class="row-between">
+                    <label data-for="agent manager" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="internal" /> Internal note</label>
+                    <button class="btn btn-primary" type="button">Post</button>
+                  </div>
+                  <p class="hint" data-for="employee">Employees cannot post internal notes.</p>
+                </form>
+              </div>
+              <div id="pane-time" hidden>
+                <ol class="timeline">
+                  <li><i></i><div><strong>Created</strong><div class="hint">Amina Perera · 4 Nov 09:14</div></div></li>
+                  <li><i></i><div><strong>SLA applied · Hardware High</strong><div class="hint">Response 1h · Resolution 8h · snapshot stored</div></div></li>
+                  <li><i></i><div><strong>Assigned to R. Chen</strong><div class="hint">K. Fernando · 4 Nov 09:41</div></div></li>
+                  <li><i></i><div><strong>First response met</strong><div class="hint">4 Nov 09:52 · 38 minutes</div></div></li>
+                  <li><i></i><div><strong>Status set to In progress</strong><div class="hint">R. Chen · 4 Nov 10:05</div></div></li>
+                </ol>
+              </div>
+            </div>
+            <aside class="stack">
+              <div class="card">
+                <h3>Resolution clock</h3>
+                <div class="sla-track"><span></span></div>
+                <div class="meta-list">
+                  <div><dt>Response</dt><dd>Met · 38m</dd></div>
+                  <div><dt>Resolve by</dt><dd>Today 17:14</dd></div>
+                  <div><dt>State</dt><dd>On track</dd></div>
+                </div>
+              </div>
+              <div class="card">
+                <h3>Ownership</h3>
+                <div class="field" data-for="manager admin">
+                  <label for="assignee">Assignee</label>
+                  <select id="assignee"><option>R. Chen · 11 open</option><option>N. Silva · 8 open</option><option>P. Dias · 6 open</option><option>Unassigned</option></select>
+                </div>
+                <div class="meta-list">
+                  <div><dt>Requester</dt><dd>Amina Perera</dd></div>
+                  <div><dt>Assignee</dt><dd>R. Chen</dd></div>
+                  <div><dt>Category</dt><dd>Hardware</dd></div>
+                </div>
+                <div class="field" data-for="agent manager" style="margin-top:12px">
+                  <label for="status">Status</label>
+                  <select id="status">
+                    <option>New</option><option>Open</option><option selected>In progress</option>
+                    <option>Pending</option><option>Resolved</option><option>Closed</option><option>Reopened</option>
+                  </select>
+                  <p class="hint">Pending pauses the SLA. Closed is available after the employee confirms.</p>
+                </div>
+                <button class="btn btn-primary btn-block" type="button" data-for="agent manager" style="margin-top:8px">Mark resolved</button>
+              </div>
+              <div class="card">
+                <h3>Attachment</h3>
+                <div class="row-between"><span>dock-amber.jpg</span><span class="hint">840 KB</span></div>
+                <p class="hint">Download is authorized for people who can already see this ticket.</p>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" data-view="notifications">
+          <div class="head-row">
+            <div>
+              <div class="kicker">Inbox</div>
+              <h1 class="page-title">Notifications</h1>
+              <p class="page-sub">In-app items for your account. Email uses the same events, with delivery retried outside the request.</p>
+            </div>
+            <button class="btn btn-ghost" type="button">Mark all read</button>
+          </div>
+          <div class="card">
+            <article class="inbox-item"><span class="dot"></span><div><strong>TKT-1042 was updated</strong><p class="hint">R. Chen replied on Laptop dock not charging.</p></div><time class="hint">12 min</time></article>
+            <article class="inbox-item"><span class="dot"></span><div><strong>Resolution waiting for you</strong><p class="hint">TKT-1022 Printer jam is resolved. Confirm to close it.</p></div><time class="hint">1 h</time></article>
+            <article class="inbox-item" data-for="agent manager admin"><span class="dot"></span><div><strong>SLA warning</strong><p class="hint">TKT-1038 response target was breached.</p></div><time class="hint">26 min</time></article>
+            <article class="inbox-item read"><span class="dot"></span><div><strong>You were assigned TKT-1042</strong><p class="hint" data-for="agent manager admin">Assigned by K. Fernando.</p><p class="hint" data-for="employee">Your request is with R. Chen.</p></div><time class="hint">Yesterday</time></article>
+          </div>
+        </section>
+
+        <section class="view" data-view="incidents" data-for="agent manager admin">
+          <div class="head-row">
+            <div>
+              <div class="kicker">Incidents</div>
+              <h1 class="page-title">Service disruptions</h1>
+              <p class="page-sub">Unplanned outages and degradations. A major incident can later collect the related tickets.</p>
+            </div>
+            <button class="btn btn-primary" type="button" data-for="agent manager">Declare incident</button>
+          </div>
+          <div class="card" style="padding:8px 8px 0">
+            <table>
+              <thead><tr><th>Incident</th><th>Severity</th><th>Status</th><th>Owner</th><th>Updated</th></tr></thead>
+              <tbody>
+                <tr class="clickable" data-go="incident"><td><div class="mono">INC-208</div><div class="subject">Organization-wide login failures</div></td><td><span class="pill critical">Critical</span></td><td><span class="pill progress">Investigating</span></td><td>K. Fernando</td><td>14:04</td></tr>
+                <tr class="clickable" data-go="incident"><td><div class="mono">INC-201</div><div class="subject">Mail gateway delay</div></td><td><span class="pill high">High</span></td><td><span class="pill open">Monitoring</span></td><td>N. Silva</td><td>11:40</td></tr>
+                <tr class="clickable" data-go="incident"><td><div class="mono">INC-188</div><div class="subject">File share read-only</div></td><td><span class="pill medium">Medium</span></td><td><span class="pill resolved">Resolved</span></td><td>P. Dias</td><td>2 Nov</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="view" data-view="incident" data-for="agent manager admin">
+          <div class="head-row">
+            <div>
+              <div class="kicker mono">INC-208 · Identity</div>
+              <h1 class="page-title">Organization-wide login failures</h1>
+              <p class="page-sub">People can open ServiceOps and mail, then get rejected at the directory. Started 13:12.</p>
+            </div>
+            <span class="pill critical">Critical</span>
+          </div>
+          <div class="layout-ticket">
+            <div class="stack">
+              <div class="card">
+                <h3>Investigation</h3>
+                <ol class="timeline">
+                  <li><i></i><div><strong>Declared by N. Silva</strong><div class="hint">13:18 · Directory timeouts on two domain controllers</div></div></li>
+                  <li><i></i><div><strong>Owner set to K. Fernando</strong><div class="hint">13:26 · Escalated from the service desk</div></div></li>
+                  <li><i></i><div><strong>Mitigation</strong><div class="hint">13:58 · Authentication pointed at the secondary controller. New sign-ins succeeding.</div></div></li>
+                </ol>
+              </div>
+              <div class="card">
+                <h3>Related requests <span class="hint">Extended</span></h3>
+                <p class="page-sub">Major-incident linking is an extended release. The layout reserves a place for the tickets that describe the same outage.</p>
+                <table>
+                  <thead><tr><th>Ticket</th><th>Requester</th></tr></thead>
+                  <tbody>
+                    <tr><td class="mono">TKT-1051</td><td>Floor 4 cannot sign in</td></tr>
+                    <tr><td class="mono">TKT-1054</td><td>Shared kiosk login loop</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <aside class="card">
+              <h3>Command</h3>
+              <div class="meta-list">
+                <div><dt>Severity</dt><dd>Critical</dd></div>
+                <div><dt>Status</dt><dd>Investigating</dd></div>
+                <div><dt>Reporter</dt><dd>N. Silva</dd></div>
+                <div><dt>Owner</dt><dd>K. Fernando</dd></div>
+              </div>
+              <div class="field" style="margin-top:12px" data-for="manager">
+                <label for="inc-owner">Reassign owner</label>
+                <select id="inc-owner"><option>K. Fernando</option><option>N. Silva</option><option>P. Dias</option></select>
+              </div>
+              <button class="btn btn-primary btn-block" type="button" data-for="agent manager" style="margin-top:8px">Record update</button>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" data-view="assignment" data-for="manager">
+          <div class="head-row">
+            <div>
+              <div class="kicker">Assignment</div>
+              <h1 class="page-title">Give every open ticket an owner.</h1>
+              <p class="page-sub">Unassigned work sits on the left. Capacity sits on the right so the next ticket does not land on the busiest agent.</p>
+            </div>
+          </div>
+          <div class="split">
+            <div class="card">
+              <h3>Unassigned · 3</h3>
+              <table>
+                <thead><tr><th>Ticket</th><th>Priority</th><th>Waiting</th><th></th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><div class="mono">TKT-1038</div><div class="subject">VPN drops on floor 4</div></td>
+                    <td><span class="pill critical">Critical</span></td><td>26m past response</td>
+                    <td><button class="btn btn-primary" type="button">Assign</button></td>
+                  </tr>
+                  <tr>
+                    <td><div class="mono">TKT-1055</div><div class="subject">Monitor flicker, reception</div></td>
+                    <td><span class="pill medium">Medium</span></td><td>18m</td>
+                    <td><button class="btn btn-ghost" type="button">Assign</button></td>
+                  </tr>
+                  <tr>
+                    <td><div class="mono">TKT-1056</div><div class="subject">Guest Wi-Fi passphrase</div></td>
+                    <td><span class="pill low">Low</span></td><td>9m</td>
+                    <td><button class="btn btn-ghost" type="button">Assign</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card">
+              <h3>Who can take it</h3>
+              <div class="load">
+                <div><span>A. Rahman</span><div class="track"><span style="width:34%"></span></div><b>4</b></div>
+                <div><span>P. Dias</span><div class="track"><span style="width:50%"></span></div><b>6</b></div>
+                <div><span>N. Silva</span><div class="track"><span style="width:66%"></span></div><b>8</b></div>
+                <div><span>R. Chen</span><div class="track"><span style="width:92%"></span></div><b>11</b></div>
+              </div>
+              <p class="hint" style="margin-top:12px">Skill-based routing is a later release. This screen is the manual desk.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" data-view="sla" data-for="manager admin">
+          <div class="head-row">
+            <div>
+              <div class="kicker">SLA</div>
+              <h1 class="page-title">Response and resolution targets</h1>
+              <p class="page-sub">Policies match priority. Business hours are Colombo weekdays, 08:00 to 18:00. Pending pauses the clock.</p>
+            </div>
+            <button class="btn btn-primary" type="button">New policy</button>
+          </div>
+          <div class="card">
+            <div class="policy" style="color:var(--muted);font-size:12px;letter-spacing:.06em;text-transform:uppercase"><span>Policy</span><span>Response</span><span>Resolution</span><span>State</span></div>
+            <div class="policy"><div><strong>Critical</strong><div class="hint">Service down for a team</div></div><span>15 min</span><span>4 hours</span><span class="pill ok">Active</span></div>
+            <div class="policy"><div><strong>High</strong><div class="hint">One person blocked</div></div><span>1 hour</span><span>8 hours</span><span class="pill ok">Active</span></div>
+            <div class="policy"><div><strong>Medium</strong><div class="hint">Standard request</div></div><span>4 hours</span><span>24 hours</span><span class="pill ok">Active</span></div>
+            <div class="policy"><div><strong>Low</strong><div class="hint">Can wait for a planned slot</div></div><span>8 hours</span><span>72 hours</span><span class="pill ok">Active</span></div>
+          </div>
+          <p class="note" style="margin-top:12px">Changing a target creates the next version. Tickets already running keep the snapshot they were given. Holidays are deferred until calendar-time policies are proven.</p>
+        </section>
+
+        <section class="view" data-view="reports" data-for="manager admin">
+          <div class="head-row">
+            <div>
+              <div class="kicker">Reports</div>
+              <h1 class="page-title">Service quality, 27 Oct – 5 Nov</h1>
+              <p class="page-sub">Filter by date and export the rows you are allowed to see. Figures follow the same scope as the role.</p>
+            </div>
+            <button class="btn btn-ghost" type="button">Export CSV</button>
+          </div>
+          <div class="filters">
+            <button type="button" aria-pressed="true">Last 10 days</button>
+            <button type="button" aria-pressed="false">This month</button>
+            <button type="button" aria-pressed="false">By category</button>
+            <button type="button" aria-pressed="false">By agent</button>
+          </div>
+          <div class="stats">
+            <div class="stat"><span>Opened</span><strong>86</strong><em>Tickets</em></div>
+            <div class="stat"><span>Resolved</span><strong>79</strong><em>Tickets</em></div>
+            <div class="stat good"><span>Response met</span><strong>96%</strong><em>Of measured tickets</em></div>
+            <div class="stat"><span>Resolution met</span><strong>91%</strong><em>Of measured tickets</em></div>
+          </div>
+          <div class="card" style="padding:8px 8px 0">
+            <table>
+              <thead><tr><th>Category</th><th>Opened</th><th>Median response</th><th>Breaches</th></tr></thead>
+              <tbody>
+                <tr><td>Hardware</td><td>28</td><td>44 min</td><td>1</td></tr>
+                <tr><td>Access</td><td>24</td><td>31 min</td><td>0</td></tr>
+                <tr><td>Network</td><td>19</td><td>22 min</td><td>2</td></tr>
+                <tr><td>Software</td><td>15</td><td>1 h 10 m</td><td>0</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="view" data-view="people" data-for="admin">
+          <div class="head-row">
+            <div>
+              <div class="kicker">People</div>
+              <h1 class="page-title">Accounts and roles</h1>
+              <p class="page-sub">Self-registration receives Employee. Only an administrator can grant Agent, Manager, or Administrator. Deactivate instead of deleting history.</p>
+            </div>
+            <button class="btn btn-primary" type="button">Invite person</button>
+          </div>
+          <div class="card" style="padding:8px 8px 0">
+            <table>
+              <thead><tr><th>Person</th><th>Email</th><th>Roles</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td>Amina Perera</td><td class="mono">amina.perera@northwind.example</td><td>Employee</td><td><span class="pill ok">Active</span></td></tr>
+                <tr><td>R. Chen</td><td class="mono">r.chen@northwind.example</td><td>Agent</td><td><span class="pill ok">Active</span></td></tr>
+                <tr><td>N. Silva</td><td class="mono">n.silva@northwind.example</td><td>Agent</td><td><span class="pill ok">Active</span></td></tr>
+                <tr><td>K. Fernando</td><td class="mono">k.fernando@northwind.example</td><td>Manager</td><td><span class="pill ok">Active</span></td></tr>
+                <tr><td>S. Jayawardena</td><td class="mono">s.jaya@northwind.example</td><td>Administrator</td><td><span class="pill ok">Active</span></td></tr>
+                <tr><td>Guest kiosk</td><td class="mono">kiosk@northwind.example</td><td>Employee</td><td><span class="pill breach">Locked</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="view" data-view="categories" data-for="admin">
+          <div class="head-row">
+            <div>
+              <div class="kicker">Catalog</div>
+              <h1 class="page-title">Ticket categories</h1>
+              <p class="page-sub">Retire a category by marking it inactive. Tickets already filed keep the name.</p>
+            </div>
+            <button class="btn btn-primary" type="button">Add category</button>
+          </div>
+          <div class="cats">
+            <article class="card"><h3>Hardware</h3><p class="hint">Laptops, docks, printers, monitors. Active.</p></article>
+            <article class="card"><h3>Access</h3><p class="hint">Accounts, mailboxes, VPN, passwords. Active.</p></article>
+            <article class="card"><h3>Software</h3><p class="hint">Installs and license requests. Active.</p></article>
+            <article class="card"><h3>Network</h3><p class="hint">Wi-Fi, floors, and outages. Active.</p></article>
+          </div>
+        </section>
+
+        <section class="view" data-view="audit" data-for="admin">
+          <div class="head-row">
+            <div>
+              <div class="kicker">Audit</div>
+              <h1 class="page-title">What changed, and who did it</h1>
+              <p class="page-sub">Sign-ins, role grants, assignment, status changes, and SLA edits. These rows cannot be edited from the product.</p>
+            </div>
+          </div>
+          <div class="card" style="padding:8px 8px 0">
+            <table>
+              <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Resource</th></tr></thead>
+              <tbody>
+                <tr><td class="mono">5 Nov 14:02</td><td>K. Fernando</td><td>ticket.assign</td><td class="mono">TKT-1038</td></tr>
+                <tr><td class="mono">5 Nov 13:18</td><td>N. Silva</td><td>incident.create</td><td class="mono">INC-208</td></tr>
+                <tr><td class="mono">5 Nov 11:20</td><td>S. Jayawardena</td><td>role.grant</td><td>P. Dias · Agent</td></tr>
+                <tr><td class="mono">5 Nov 09:05</td><td>System</td><td>auth.lock</td><td>kiosk@northwind.example</td></tr>
+                <tr><td class="mono">4 Nov 16:40</td><td>S. Jayawardena</td><td>sla.policy.update</td><td>High · resolution 8h</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="view" data-view="settings" data-for="admin">
+          <div class="head-row">
+            <div>
+              <div class="kicker">Settings</div>
+              <h1 class="page-title">This organization</h1>
+              <p class="page-sub">One organization for the first release. Time, email, and retention live here.</p>
+            </div>
+          </div>
+          <div class="split">
+            <form class="card stack">
+              <div class="field"><label for="org">Organization name</label><input id="org" value="Northwind Internal IT" /></div>
+              <div class="field"><label for="tz">Timezone</label><input id="tz" value="Asia/Colombo" /></div>
+              <div class="field"><label for="from">Notification sender</label><input id="from" value="serviceops@northwind.example" /></div>
+              <div class="field"><label for="keep">Ticket retention</label><select id="keep"><option>Keep for 24 months, then archive</option><option>Keep indefinitely</option></select></div>
+              <button class="btn btn-primary" type="button" style="justify-self:start">Save settings</button>
+            </form>
+            <div class="note">Passwords, refresh tokens, and raw email credentials are never shown on this screen and never written into the audit payload.</div>
+          </div>
+        </section>
+
+        <section class="view" data-view="knowledge" data-for="employee agent manager">
+          <div class="head-row">
+            <div>
+              <div class="kicker">Knowledge · Extended</div>
+              <h1 class="page-title">Solve it before you file a ticket.</h1>
+              <p class="page-sub">Published guides for the organization. Rating and ticket links arrive with the knowledge module.</p>
+            </div>
+          </div>
+          <div class="field" style="max-width:520px"><label for="kb">Search articles</label><input id="kb" value="password" /></div>
+          <div class="card" style="margin-top:12px">
+            <article class="article"><div><strong>Reset a forgotten Windows password</strong><p class="hint">Access · 4 min · Updated 1 Nov</p></div><span class="pill ok">Published</span></article>
+            <article class="article"><div><strong>Connect to the office VPN</strong><p class="hint">Network · 3 min</p></div><span class="pill ok">Published</span></article>
+            <article class="article"><div><strong>Clear a printer jam on the 3rd floor</strong><p class="hint">Hardware · 2 min</p></div><span class="pill ok">Published</span></article>
+            <article class="article"><div><strong>Request a software install</strong><p class="hint">Software · 2 min</p></div><span class="pill pending">Draft</span></article>
+          </div>
+        </section>
+
+        <section class="view" data-view="assets" data-for="manager">
+          <div class="head-row">
+            <div>
+              <div class="kicker">Assets · Extended</div>
+              <h1 class="page-title">Equipment tied to the person and the ticket.</h1>
+              <p class="page-sub">Not in the first release. The screen shows how a dock ticket would meet the laptop record.</p>
+            </div>
+          </div>
+          <div class="card" style="padding:8px 8px 0">
+            <table>
+              <thead><tr><th>Asset</th><th>Holder</th><th>Status</th><th>Warranty</th><th>Open ticket</th></tr></thead>
+              <tbody>
+                <tr><td><div class="mono">LAT-5440-18</div><div>Dell Latitude 5440</div></td><td>Amina Perera</td><td><span class="pill progress">In repair</span></td><td>Aug 2027</td><td class="mono">TKT-1042</td></tr>
+                <tr><td><div class="mono">DOCK-04-12</div><div>USB-C dock</div></td><td>Finance pool</td><td><span class="pill breach">Failed</span></td><td>Jan 2026</td><td class="mono">TKT-1042</td></tr>
+                <tr><td><div class="mono">PRN-3F-02</div><div>HP Laser, 3rd floor</div></td><td>Shared</td><td><span class="pill ok">In service</span></td><td>Mar 2028</td><td class="mono">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="view" data-view="denied">
+          <div class="denied">
+            <div class="kicker">Access</div>
+            <h1 class="page-title">This desk is not on your role.</h1>
+            <p class="page-sub">The server refuses the page, not only the menu. Ask an administrator if your work needs a different role.</p>
+            <button class="btn btn-primary" type="button" data-go="home" style="margin-top:16px">Back to your home</button>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+<script>
+const screens = [
+  ["login", "Sign in"],
+  ["reset", "Forgot password"],
+  ["home", "Home"],
+  ["tickets", "Requests"],
+  ["new", "New request"],
+  ["ticket", "Ticket"],
+  ["notifications", "Inbox"],
+  ["incidents", "Incidents"],
+  ["incident", "Incident"],
+  ["assignment", "Assignment"],
+  ["sla", "SLA policies"],
+  ["reports", "Reports"],
+  ["people", "People and roles"],
+  ["categories", "Categories"],
+  ["audit", "Audit log"],
+  ["settings", "Settings"],
+  ["knowledge", "Knowledge"],
+  ["assets", "Assets"]
+];
+const access = {
+  employee: ["home", "tickets", "new", "ticket", "notifications", "knowledge"],
+  agent: ["home", "tickets", "ticket", "notifications", "incidents", "incident", "knowledge"],
+  manager: ["home", "tickets", "ticket", "notifications", "incidents", "incident", "assignment", "sla", "reports", "knowledge", "assets"],
+  admin: ["home", "tickets", "ticket", "notifications", "incidents", "incident", "sla", "reports", "people", "categories", "audit", "settings"]
+};
+const navItems = {
+  employee: [["home", "Home"], ["tickets", "My requests"], ["new", "New request"], ["knowledge", "Knowledge"], ["notifications", "Inbox"]],
+  agent: [["home", "Queue"], ["tickets", "All tickets"], ["incidents", "Incidents"], ["knowledge", "Knowledge"], ["notifications", "Inbox"]],
+  manager: [["home", "Overview"], ["tickets", "Tickets"], ["assignment", "Assignment"], ["incidents", "Incidents"], ["sla", "SLA"], ["reports", "Reports"], ["assets", "Assets"]],
+  admin: [["home", "Platform"], ["people", "People"], ["categories", "Categories"], ["sla", "SLA"], ["reports", "Reports"], ["audit", "Audit"], ["settings", "Settings"]]
+};
+const people = {
+  employee: { name: "Amina Perera", role: "Employee · Finance", avatar: "AP", email: "amina.perera@northwind.example" },
+  agent: { name: "R. Chen", role: "IT Support Agent", avatar: "RC", email: "r.chen@northwind.example" },
+  manager: { name: "K. Fernando", role: "IT Manager", avatar: "KF", email: "k.fernando@northwind.example" },
+  admin: { name: "S. Jayawardena", role: "System Administrator", avatar: "SJ", email: "s.jaya@northwind.example" }
+};
+const copy = {
+  employee: ["Your requests", "My requests", "Everything you have submitted, including closed work kept for history."],
+  agent: ["Queue", "All visible tickets", "Work you are allowed to open, with SLA state beside the status."],
+  manager: ["Organization", "Every open ticket", "Assign, reassign, and watch breaches across the service desk."],
+  admin: ["Records", "Ticket register", "Administrators can read tickets. Assignment stays with managers."]
+};
+
+const jump = document.getElementById("screen-jump");
+screens.forEach(([id, label]) => {
+  const opt = document.createElement("option");
+  opt.value = id;
+  opt.textContent = label;
+  jump.appendChild(opt);
+});
+
+let role = "employee";
+let view = "login";
+
+function applyRoleVisibility() {
+  document.body.dataset.role = role;
+  document.querySelectorAll("[data-for]:not(.view)").forEach((el) => {
+    el.hidden = !el.dataset.for.split(" ").includes(role);
+  });
+  const person = people[role];
+  document.getElementById("who-name").textContent = person.name;
+  document.getElementById("who-role").textContent = person.role;
+  document.getElementById("avatar").textContent = person.avatar;
+  document.getElementById("email").value = person.email;
+  const [k, t, s] = copy[role];
+  document.getElementById("tickets-kicker").textContent = k;
+  document.getElementById("tickets-title").textContent = t;
+  document.getElementById("tickets-sub").textContent = s;
+  const nav = document.getElementById("nav");
+  nav.innerHTML = "";
+  navItems[role].forEach(([id, label]) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    b.dataset.go = id;
+    if (id === view) b.setAttribute("aria-current", "page");
+    nav.appendChild(b);
+  });
+  document.querySelectorAll(".roles button").forEach((b) => {
+    b.setAttribute("aria-pressed", String(b.dataset.role === role));
+  });
+}
+
+function show(next) {
+  view = next;
+  document.body.dataset.screen = next;
+  const outside = next === "login" || next === "reset";
+  document.getElementById("login").classList.toggle("is-on", next === "login");
+  document.getElementById("reset").classList.toggle("is-on", next === "reset");
+  document.getElementById("app").classList.toggle("is-on", !outside);
+  const permitted = outside || access[role].includes(next);
+  document.querySelectorAll(".view").forEach((el) => {
+    const roleOk = !el.dataset.for || el.dataset.for.split(" ").includes(role);
+    const showView = permitted ? el.dataset.view === next && roleOk : el.dataset.view === "denied";
+    el.hidden = !showView;
+  });
+  jump.value = next;
+  applyRoleVisibility();
+}
+
+document.body.addEventListener("click", (event) => {
+  const roleBtn = event.target.closest(".roles button");
+  if (roleBtn) {
+    role = roleBtn.dataset.role;
+    if (view !== "login" && view !== "reset" && !access[role].includes(view)) show("home");
+    else show(view);
+    return;
+  }
+  const go = event.target.closest("[data-go]");
+  if (go) show(go.dataset.go);
+});
+
+jump.addEventListener("change", () => show(jump.value));
+
+document.getElementById("signin-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  show("home");
+});
+document.getElementById("goto-reset").addEventListener("click", () => show("reset"));
+document.getElementById("back-login").addEventListener("click", () => show("login"));
+document.getElementById("signout").addEventListener("click", () => show("login"));
+document.getElementById("reset-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  document.getElementById("reset-done").hidden = false;
+});
+document.getElementById("new-ticket").addEventListener("submit", (e) => {
+  e.preventDefault();
+  document.getElementById("new-result").textContent = "TKT-1057 created. The Hardware High clock starts now.";
+  setTimeout(() => show("ticket"), 600);
+});
+document.querySelectorAll("tr.clickable").forEach((row) => {
+  row.tabIndex = 0;
+  row.setAttribute("role", "button");
+  row.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      row.click();
+    }
+  });
+});
+document.querySelectorAll(".cats .cat, .filters button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const group = btn.parentElement;
+    group.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", "false"));
+    btn.setAttribute("aria-pressed", "true");
+  });
+});
+document.getElementById("tab-talk").addEventListener("click", () => {
+  document.getElementById("pane-talk").hidden = false;
+  document.getElementById("pane-time").hidden = true;
+  document.getElementById("tab-talk").setAttribute("aria-pressed", "true");
+  document.getElementById("tab-time").setAttribute("aria-pressed", "false");
+});
+document.getElementById("tab-time").addEventListener("click", () => {
+  document.getElementById("pane-talk").hidden = true;
+  document.getElementById("pane-time").hidden = false;
+  document.getElementById("tab-talk").setAttribute("aria-pressed", "false");
+  document.getElementById("tab-time").setAttribute("aria-pressed", "true");
+});
+
+show("login");
+</script>
+</body>
+</html>
