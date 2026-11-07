@@ -1,32 +1,20 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { ProtectedRoute } from '@/components/auth/protected-route';
-import { Navbar } from '@/components/layout/navbar';
 import { RoleName } from '@/types/auth';
 import { api } from '@/lib/api';
-import {
-  Ticket,
-  AlertTriangle,
-  Clock,
-  Layers,
-  Database,
-  ShieldCheck,
-  Users,
-  CheckCircle,
-  FileText,
-  Key,
-} from 'lucide-react';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [usersList, setUsersList] = useState<any[]>([]);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('home');
 
   const primaryRole = user?.roles[0] || RoleName.EMPLOYEE;
 
-  // Test fetching protected /users endpoint (Admin / Manager only)
+  // Fetch users for Admin/Manager view
   useEffect(() => {
     if (
       user?.roles.includes(RoleName.SYSTEM_ADMINISTRATOR) ||
@@ -34,215 +22,830 @@ export default function DashboardPage() {
     ) {
       api
         .get('/users')
-        .then((res) => {
-          setUsersList(res.data?.data || []);
-        })
-        .catch((err) => {
-          setApiError(err?.response?.data?.message || 'Failed to fetch user directory');
-        });
+        .then((res) => setUsersList(res.data?.data || []))
+        .catch((err) => setApiError(err?.response?.data?.message || 'Error fetching users'));
     }
   }, [user]);
 
+  const initials = `${user?.firstName?.[0] || 'A'}${user?.lastName?.[0] || 'P'}`;
+  const roleDisplay = primaryRole.replace(/_/g, ' ');
+
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-        <Navbar />
-
-        <main className="flex-1 p-6 md:p-8 max-w-7xl mx-auto w-full">
-          {/* Welcome Banner */}
-          <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-850 border border-slate-800">
+      <div id="app" className="screen is-on" data-screen="app">
+        {/* Left Navigation Rail */}
+        <aside className="rail">
+          <div className="rail-brand">
+            <span className="mark">
+              <i></i>
+            </span>
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs uppercase font-bold tracking-wider text-brand-400">
-                  {primaryRole.replace(/_/g, ' ')} Workspace
-                </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              </div>
-              <h1 className="text-2xl font-bold text-white">
-                Welcome back, {user?.firstName} {user?.lastName}
-              </h1>
-              <p className="text-xs text-slate-400 mt-1">
-                Department: <span className="text-slate-300 font-medium">{user?.department || 'General IT'}</span> • Title: <span className="text-slate-300 font-medium">{user?.jobTitle || 'Staff Member'}</span>
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-slate-300 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Session Active (15m Rotation)</span>
-              </div>
+              <strong>ServiceOps</strong>
+              <span>Northwind Internal IT</span>
             </div>
           </div>
 
-          {/* Module 1 RBAC Security Matrix Display */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            {/* Identity & Token Card */}
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center">
-                  <Key className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-white text-sm">Authenticated Identity</h3>
-                  <p className="text-xs text-slate-400">JWT Claims & Lifecycle</p>
-                </div>
-              </div>
+          <nav id="nav" aria-label="Primary">
+            {primaryRole === RoleName.EMPLOYEE && (
+              <>
+                <button
+                  type="button"
+                  aria-current={activeTab === 'home' ? 'page' : undefined}
+                  onClick={() => setActiveTab('home')}
+                >
+                  Home
+                </button>
+                <button
+                  type="button"
+                  aria-current={activeTab === 'requests' ? 'page' : undefined}
+                  onClick={() => setActiveTab('requests')}
+                >
+                  My Requests (3)
+                </button>
+                <button
+                  type="button"
+                  aria-current={activeTab === 'new' ? 'page' : undefined}
+                  onClick={() => setActiveTab('new')}
+                >
+                  + New Request
+                </button>
+                <button
+                  type="button"
+                  aria-current={activeTab === 'kb' ? 'page' : undefined}
+                  onClick={() => setActiveTab('kb')}
+                >
+                  Knowledge Base
+                </button>
+                <button
+                  type="button"
+                  aria-current={activeTab === 'assets' ? 'page' : undefined}
+                  onClick={() => setActiveTab('assets')}
+                >
+                  My IT Assets
+                </button>
+              </>
+            )}
 
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                  <span className="text-slate-400">User ID</span>
-                  <span className="font-mono text-slate-200">{user?.id.slice(0, 13)}...</span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                  <span className="text-slate-400">Assigned Roles</span>
-                  <span className="font-semibold text-brand-400">{user?.roles.join(', ')}</span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                  <span className="text-slate-400">Token Strategy</span>
-                  <span className="text-emerald-400">Argon2id + Dual JWT</span>
-                </div>
-                <div className="flex justify-between py-1.5">
-                  <span className="text-slate-400">Refresh Mechanism</span>
-                  <span className="text-indigo-400">HttpOnly Cookie (7d)</span>
-                </div>
-              </div>
+            {primaryRole === RoleName.IT_SUPPORT_AGENT && (
+              <>
+                <button
+                  type="button"
+                  aria-current={activeTab === 'queue' ? 'page' : undefined}
+                  onClick={() => setActiveTab('queue')}
+                >
+                  My Queue (7)
+                </button>
+                <button
+                  type="button"
+                  aria-current={activeTab === 'all' ? 'page' : undefined}
+                  onClick={() => setActiveTab('all')}
+                >
+                  Unassigned Pool (3)
+                </button>
+                <button
+                  type="button"
+                  aria-current={activeTab === 'incidents' ? 'page' : undefined}
+                  onClick={() => setActiveTab('incidents')}
+                >
+                  Major Incidents (1)
+                </button>
+                <button
+                  type="button"
+                  aria-current={activeTab === 'kb' ? 'page' : undefined}
+                  onClick={() => setActiveTab('kb')}
+                >
+                  Knowledge Articles
+                </button>
+              </>
+            )}
+
+            {(primaryRole === RoleName.IT_MANAGER ||
+              primaryRole === RoleName.SYSTEM_ADMINISTRATOR) && (
+              <>
+                <button
+                  type="button"
+                  aria-current={activeTab === 'overview' ? 'page' : undefined}
+                  onClick={() => setActiveTab('overview')}
+                >
+                  Operations Overview
+                </button>
+                <button
+                  type="button"
+                  aria-current={activeTab === 'users' ? 'page' : undefined}
+                  onClick={() => setActiveTab('users')}
+                >
+                  Enterprise Directory
+                </button>
+                <button
+                  type="button"
+                  aria-current={activeTab === 'sla' ? 'page' : undefined}
+                  onClick={() => setActiveTab('sla')}
+                >
+                  SLA Compliance Matrix
+                </button>
+                <button
+                  type="button"
+                  aria-current={activeTab === 'incidents' ? 'page' : undefined}
+                  onClick={() => setActiveTab('incidents')}
+                >
+                  Incident War-Room
+                </button>
+              </>
+            )}
+          </nav>
+
+          {/* User Profile in Rail */}
+          <div className="who">
+            <div className="avatar" id="avatar">
+              {initials}
+            </div>
+            <div>
+              <strong id="who-name">
+                {user?.firstName} {user?.lastName}
+              </strong>
+              <small id="who-role">
+                {roleDisplay} · {user?.department || 'Operations'}
+              </small>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Workspace Area */}
+        <div className="workspace">
+          {/* Top Sticky Header */}
+          <header className="top">
+            <div className="search">
+              <input id="q" placeholder="Search tickets, incidents, people, assets..." />
             </div>
 
-            {/* Granted Permissions Card */}
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 lg:col-span-2">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center">
-                    <ShieldCheck className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-white text-sm">Active Granted Permissions</h3>
-                    <p className="text-xs text-slate-400">Server-enforced fine-grained permissions ({user?.permissions.length || 0})</p>
-                  </div>
-                </div>
-              </div>
+            <div className="top-meta">
+              <span className="live">
+                <i></i> Desk live
+              </span>
+              <span>Colombo Office · 14:10</span>
+              <button className="icon-btn" type="button" aria-label="Notifications">
+                Inbox <span className="badge">3</span>
+              </button>
+              <button className="icon-btn" type="button" id="signout" onClick={() => logout()}>
+                Sign out
+              </button>
+            </div>
+          </header>
 
-              <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-2">
-                {user?.permissions.map((perm) => (
-                  <span
-                    key={perm}
-                    className="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-[11px] font-mono text-slate-300"
+          <main>
+            {/* EMPLOYEE PORTAL VIEW */}
+            {primaryRole === RoleName.EMPLOYEE && (
+              <section className="view">
+                {/* Active Incident / Outage Alert Banner */}
+                <div className="outage-banner">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div className="outage-icon">⚠️</div>
+                    <div>
+                      <strong style={{ color: 'var(--amber)', fontSize: 14 }}>
+                        Active Service Notice: Organization-wide login latency (INC-208)
+                      </strong>
+                      <div className="hint" style={{ color: 'var(--ink-soft)', marginTop: 2 }}>
+                        IT Operations is investigating intermittent directory delays. New password
+                        and mailbox requests may take longer than usual.
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-ghost"
+                    type="button"
+                    style={{
+                      whiteSpace: 'nowrap',
+                      fontSize: 13,
+                      padding: '6px 14px',
+                      borderColor: '#d0b57e',
+                    }}
                   >
-                    {perm}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
+                    View incident update
+                  </button>
+                </div>
 
-          {/* Role-Specific Workspace Preview */}
-          {primaryRole === RoleName.EMPLOYEE && (
-            <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800">
-              <h2 className="text-base font-semibold text-white mb-2">Employee Self-Service Desk</h2>
-              <p className="text-xs text-slate-400 mb-6">
-                Module 1 has established your Employee session with strict ownership boundaries: you can only submit tickets and view your own requests.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                  <Ticket className="w-5 h-5 text-blue-400 mb-2" />
-                  <p className="text-xs font-semibold text-white">Create Ticket</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Ready for Module 2</p>
+                {/* Action Required / Confirmation Card */}
+                <div className="action-card" id="home-action-card">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div className="badge-icon">✓</div>
+                    <div>
+                      <div
+                        style={{
+                          fontFamily: 'var(--mono)',
+                          fontSize: 11,
+                          color: 'var(--copper)',
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                        }}
+                      >
+                        Action Required · Confirm Resolution
+                      </div>
+                      <strong style={{ fontSize: 15, display: 'block', marginTop: 2 }}>
+                        TKT-1022: Printer jam, 3rd floor was marked Resolved
+                      </strong>
+                      <p className="hint" style={{ marginTop: 2, color: 'var(--ink-soft)' }}>
+                        Agent R. Chen cleared sensor B and tested 5 sample pages. Please confirm your
+                        issue is resolved to close this request.
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                    <button
+                      className="btn btn-primary"
+                      type="button"
+                      style={{ fontSize: 13, padding: '8px 14px' }}
+                    >
+                      Confirm & Close
+                    </button>
+                    <button
+                      className="btn btn-ghost"
+                      type="button"
+                      style={{ fontSize: 13, padding: '8px 14px' }}
+                    >
+                      Review ticket
+                    </button>
+                  </div>
                 </div>
-                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                  <Clock className="w-5 h-5 text-amber-400 mb-2" />
-                  <p className="text-xs font-semibold text-white">Track Requests</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Ownership scoper active</p>
-                </div>
-                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                  <FileText className="w-5 h-5 text-emerald-400 mb-2" />
-                  <p className="text-xs font-semibold text-white">Browse Knowledge</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Ready for Module 6</p>
-                </div>
-              </div>
-            </div>
-          )}
 
-          {(primaryRole === RoleName.SYSTEM_ADMINISTRATOR || primaryRole === RoleName.IT_MANAGER) && (
-            <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-indigo-400" />
-                  <h2 className="text-base font-semibold text-white">Live Enterprise User Directory (API Protected)</h2>
-                </div>
-                <span className="text-xs text-slate-400">{usersList.length} accounts returned by backend</span>
-              </div>
+                {/* Hero Greeting & Self-Service Search Bar */}
+                <div className="hero-search-box">
+                  <div className="head-row" style={{ marginBottom: 14 }}>
+                    <div>
+                      <div className="kicker">Self-Service Portal · Colombo Office</div>
+                      <h1 className="page-title" style={{ fontSize: 32 }}>
+                        Good afternoon, {user?.firstName}.
+                      </h1>
+                      <p className="page-sub">
+                        How can IT support help you today? Search knowledge guides or submit a
+                        request.
+                      </p>
+                    </div>
+                    <button className="btn btn-primary" type="button">
+                      + New request
+                    </button>
+                  </div>
 
-              {apiError ? (
-                <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
-                  {apiError}
+                  <div
+                    className="hero-search-input-wrap"
+                    style={{
+                      background: 'var(--card-2)',
+                      border: '1px solid var(--line-strong)',
+                      borderRadius: 10,
+                      padding: '8px 14px',
+                    }}
+                  >
+                    <span style={{ fontSize: 16, color: 'var(--muted)' }}>🔍</span>
+                    <input
+                      id="portal-search-input"
+                      placeholder="Search for self-help guides, request new equipment, report an issue..."
+                    />
+                    <button
+                      className="btn btn-primary"
+                      type="button"
+                      style={{ fontSize: 13, padding: '6px 14px', whiteSpace: 'nowrap' }}
+                    >
+                      Search
+                    </button>
+                  </div>
+
+                  <div className="quick-tags">
+                    <span className="hint" style={{ margin: 0, fontWeight: 500 }}>
+                      Popular requests:
+                    </span>
+                    <button className="quick-tag" type="button">
+                      💻 Laptop dock
+                    </button>
+                    <button className="quick-tag" type="button">
+                      🔑 Password reset
+                    </button>
+                    <button className="quick-tag" type="button">
+                      📦 Figma license
+                    </button>
+                    <button className="quick-tag" type="button">
+                      🌐 Office Wi-Fi
+                    </button>
+                    <button className="quick-tag" type="button">
+                      📚 Browse 24 help guides
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
-                        <th className="py-2.5 px-3">User</th>
-                        <th className="py-2.5 px-3">Department</th>
-                        <th className="py-2.5 px-3">Role</th>
-                        <th className="py-2.5 px-3">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/50">
-                      {usersList.map((u) => (
-                        <tr key={u.id} className="hover:bg-slate-800/30 transition">
-                          <td className="py-3 px-3">
-                            <p className="font-semibold text-white">{u.firstName} {u.lastName}</p>
-                            <p className="text-[11px] text-slate-400">{u.email}</p>
-                          </td>
-                          <td className="py-3 px-3 text-slate-300">{u.department || '—'}</td>
-                          <td className="py-3 px-3">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-brand-300 border border-slate-700">
-                              {u.userRoles?.[0]?.role?.displayName || 'Role'}
-                            </span>
-                          </td>
-                          <td className="py-3 px-3">
-                            <span className="inline-flex items-center gap-1 text-emerald-400 font-medium">
-                              <CheckCircle className="w-3 h-3" />
-                              {u.status}
-                            </span>
-                          </td>
+
+                {/* Employee Stats */}
+                <div className="stats">
+                  <div className="stat">
+                    <span>Active requests</span>
+                    <strong id="stat-active-count">3</strong>
+                    <em>Owned by you</em>
+                  </div>
+                  <div className="stat warn" id="stat-waiting-box">
+                    <span>Waiting on you</span>
+                    <strong id="stat-waiting-count">1</strong>
+                    <em>Confirm resolution</em>
+                  </div>
+                  <div className="stat good">
+                    <span>Resolved this month</span>
+                    <strong id="stat-resolved-count">8</strong>
+                    <em>Closed after confirmation</em>
+                  </div>
+                  <div className="stat">
+                    <span>Avg. first response</span>
+                    <strong>38m</strong>
+                    <em>On your tickets</em>
+                  </div>
+                </div>
+
+                {/* Main Dashboard Split Layout */}
+                <div className="split">
+                  <div className="stack">
+                    {/* My Active Requests Card */}
+                    <div className="card">
+                      <div className="row-between" style={{ marginBottom: 12 }}>
+                        <h3>Your open requests</h3>
+                        <button
+                          className="btn"
+                          type="button"
+                          style={{ padding: 0, color: 'var(--copper)', fontSize: 13 }}
+                        >
+                          View all 12 requests &rarr;
+                        </button>
+                      </div>
+
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Ticket</th>
+                            <th>Category</th>
+                            <th>Assignee</th>
+                            <th>Status</th>
+                            <th>SLA Target</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="clickable">
+                            <td>
+                              <div className="mono">TKT-1042</div>
+                              <div className="subject">Laptop dock not charging</div>
+                            </td>
+                            <td>
+                              <span className="badge-tag">Hardware</span>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span
+                                  style={{
+                                    width: 22,
+                                    height: 22,
+                                    borderRadius: '50%',
+                                    background: '#3a3028',
+                                    color: 'white',
+                                    fontSize: 10,
+                                    display: 'grid',
+                                    placeItems: 'center',
+                                  }}
+                                >
+                                  RC
+                                </span>
+                                <span style={{ fontSize: 13 }}>R. Chen</span>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="pill progress">In progress</span>
+                            </td>
+                            <td>
+                              <span className="pill ok">2h 10m left</span>
+                            </td>
+                            <td>
+                              <button
+                                className="btn btn-ghost"
+                                type="button"
+                                style={{ padding: '4px 8px', fontSize: 12 }}
+                              >
+                                View
+                              </button>
+                            </td>
+                          </tr>
+
+                          <tr className="clickable">
+                            <td>
+                              <div className="mono">TKT-1031</div>
+                              <div className="subject">New starter email access</div>
+                            </td>
+                            <td>
+                              <span className="badge-tag">Access</span>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span
+                                  style={{
+                                    width: 22,
+                                    height: 22,
+                                    borderRadius: '50%',
+                                    background: '#4e3d30',
+                                    color: 'white',
+                                    fontSize: 10,
+                                    display: 'grid',
+                                    placeItems: 'center',
+                                  }}
+                                >
+                                  NS
+                                </span>
+                                <span style={{ fontSize: 13 }}>N. Silva</span>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="pill pending">Pending</span>
+                            </td>
+                            <td>
+                              <span className="pill pause">Paused</span>
+                            </td>
+                            <td>
+                              <button
+                                className="btn btn-ghost"
+                                type="button"
+                                style={{ padding: '4px 8px', fontSize: 12 }}
+                              >
+                                View
+                              </button>
+                            </td>
+                          </tr>
+
+                          <tr className="clickable">
+                            <td>
+                              <div className="mono">TKT-1022</div>
+                              <div className="subject">Printer jam, 3rd floor</div>
+                            </td>
+                            <td>
+                              <span className="badge-tag">Hardware</span>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span
+                                  style={{
+                                    width: 22,
+                                    height: 22,
+                                    borderRadius: '50%',
+                                    background: '#3a3028',
+                                    color: 'white',
+                                    fontSize: 10,
+                                    display: 'grid',
+                                    placeItems: 'center',
+                                  }}
+                                >
+                                  RC
+                                </span>
+                                <span style={{ fontSize: 13 }}>R. Chen</span>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="pill resolved">Resolved</span>
+                            </td>
+                            <td>
+                              <span className="pill ok">Met</span>
+                            </td>
+                            <td>
+                              <button
+                                className="btn btn-primary"
+                                type="button"
+                                style={{ padding: '4px 10px', fontSize: 12 }}
+                              >
+                                Confirm
+                              </button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Recommended Self-Service Guides */}
+                    <div className="card">
+                      <div className="row-between" style={{ marginBottom: 12 }}>
+                        <h3>Recommended self-service guides</h3>
+                        <button
+                          className="btn"
+                          type="button"
+                          style={{ padding: 0, color: 'var(--copper)', fontSize: 13 }}
+                        >
+                          Knowledge base &rarr;
+                        </button>
+                      </div>
+                      <div className="stack">
+                        <article className="article clickable">
+                          <div>
+                            <strong style={{ fontSize: 14 }}>
+                              Troubleshooting USB-C dock charging and dual display issues
+                            </strong>
+                            <p className="hint">Hardware · 3 min read · Firmware 2024 update guide</p>
+                          </div>
+                          <span className="pill ok">Quick fix</span>
+                        </article>
+                        <article className="article clickable">
+                          <div>
+                            <strong style={{ fontSize: 14 }}>
+                              Connecting to Northwind secure internal VPN (GlobalProtect)
+                            </strong>
+                            <p className="hint">Network · 4 min read · Remote working setup</p>
+                          </div>
+                          <span className="pill ok">Guide</span>
+                        </article>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Service Catalog & Desk Info */}
+                  <div className="stack">
+                    <div className="card">
+                      <h3 style={{ marginBottom: 4 }}>Request a service</h3>
+                      <p className="hint" style={{ marginBottom: 12 }}>
+                        Select a service line to open a tailored request form:
+                      </p>
+                      <div className="service-grid">
+                        <button className="service-card" type="button">
+                          <span className="svc-icon">💻</span>
+                          <strong>Hardware</strong>
+                          <span>Laptops, docks, screens</span>
+                        </button>
+                        <button className="service-card" type="button">
+                          <span className="svc-icon">🔑</span>
+                          <strong>Access</strong>
+                          <span>Accounts, mail, VPN</span>
+                        </button>
+                        <button className="service-card" type="button">
+                          <span className="svc-icon">📦</span>
+                          <strong>Software</strong>
+                          <span>Installs & licenses</span>
+                        </button>
+                        <button className="service-card" type="button">
+                          <span className="svc-icon">🌐</span>
+                          <strong>Network</strong>
+                          <span>Wi-Fi, ethernet, outages</span>
+                        </button>
+                        <button className="service-card" type="button">
+                          <span className="svc-icon">🏢</span>
+                          <strong>Workplace</strong>
+                          <span>Printers, AV, phones</span>
+                        </button>
+                        <button className="service-card" type="button">
+                          <span className="svc-icon">🔒</span>
+                          <strong>Security</strong>
+                          <span>Phishing, badges, tokens</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="card">
+                      <h3>IT Support desk</h3>
+                      <div style={{ marginTop: 8 }}>
+                        <div className="desk-info-row">
+                          <span style={{ fontSize: 16 }}>🟢</span>
+                          <div>
+                            <strong>Desk status: Live</strong>
+                            <div className="hint">Support agents actively on duty</div>
+                          </div>
+                        </div>
+                        <div className="desk-info-row">
+                          <span style={{ fontSize: 16 }}>📍</span>
+                          <div>
+                            <strong>Walk-in IT Hub</strong>
+                            <div className="hint">Floor 3, West Wing · Mon–Fri 08:30–17:30</div>
+                          </div>
+                        </div>
+                        <div className="desk-info-row">
+                          <span style={{ fontSize: 16 }}>📞</span>
+                          <div>
+                            <strong>Emergency Hotline: Ext. 4400</strong>
+                            <div className="hint">For team-wide critical stops & security incidents</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="note">
+                      <strong>Privacy guarantee:</strong> Internal notes between support agents never
+                      appear on this portal. You only see public communications written directly for
+                      you.
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* AGENT QUEUE VIEW */}
+            {primaryRole === RoleName.IT_SUPPORT_AGENT && (
+              <section className="view">
+                <div className="pickup-banner">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 18 }}>⚡</span>
+                    <div>
+                      <strong style={{ fontSize: 14 }}>
+                        3 unassigned tickets in the incoming queue
+                      </strong>
+                      <div className="hint" style={{ color: 'var(--ink-soft)', marginTop: 1 }}>
+                        Highest priority: TKT-1038 (Critical · Network floor 4) is 26m past response
+                        target.
+                      </div>
+                    </div>
+                  </div>
+                  <button className="btn btn-primary" type="button" style={{ fontSize: 13 }}>
+                    Claim next ticket (TKT-1038)
+                  </button>
+                </div>
+
+                <div className="head-row">
+                  <div>
+                    <div className="kicker">Support Desk Queue · Agent {user?.firstName}</div>
+                    <h1 className="page-title">Seven tickets on your desk.</h1>
+                    <p className="page-sub">
+                      One response target is already breached. Two resolutions fall inside the next
+                      two hours.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="stats">
+                  <div className="stat">
+                    <span>Assigned to you</span>
+                    <strong>7</strong>
+                    <em>Active backlog</em>
+                  </div>
+                  <div className="stat warn">
+                    <span>SLA breached</span>
+                    <strong>1</strong>
+                    <em>Needs escalation</em>
+                  </div>
+                  <div className="stat">
+                    <span>Due under 2 hours</span>
+                    <strong>2</strong>
+                    <em>Urgent resolution</em>
+                  </div>
+                  <div className="stat good">
+                    <span>Response met today</span>
+                    <strong>5 / 5</strong>
+                    <em>100% compliance</em>
+                  </div>
+                </div>
+
+                <div className="split-3">
+                  <div className="card lane" style={{ borderTop: '3px solid var(--rose)' }}>
+                    <h3>Breached (1)</h3>
+                    <div className="stack" style={{ marginTop: 8 }}>
+                      <div className="tcard" style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 10, background: 'white' }}>
+                        <div className="row-between">
+                          <span className="mono">TKT-1038</span>
+                          <span className="pill critical">Critical</span>
+                        </div>
+                        <div className="subject" style={{ marginTop: 6, fontWeight: 600 }}>VPN drops on floor 4</div>
+                        <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className="pill breach">Breached 26m</span>
+                          <span className="hint">Network</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="card lane" style={{ borderTop: '3px solid var(--amber)' }}>
+                    <h3>Due Under 2 Hours (2)</h3>
+                    <div className="stack" style={{ marginTop: 8 }}>
+                      <div className="tcard" style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 10, background: 'white' }}>
+                        <div className="row-between">
+                          <span className="mono">TKT-1042</span>
+                          <span className="pill progress">In progress</span>
+                        </div>
+                        <div className="subject" style={{ marginTop: 6, fontWeight: 600 }}>Laptop dock not charging</div>
+                        <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className="pill risk">45m left</span>
+                          <span className="hint">Hardware</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="card lane" style={{ borderTop: '3px solid var(--moss)' }}>
+                    <h3>On Track (4)</h3>
+                    <div className="stack" style={{ marginTop: 8 }}>
+                      <div className="tcard" style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 10, background: 'white' }}>
+                        <div className="row-between">
+                          <span className="mono">TKT-1031</span>
+                          <span className="pill pending">Pending</span>
+                        </div>
+                        <div className="subject" style={{ marginTop: 6, fontWeight: 600 }}>New starter email access</div>
+                        <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className="pill pause">Paused</span>
+                          <span className="hint">Access</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* MANAGER / ADMIN VIEW */}
+            {(primaryRole === RoleName.IT_MANAGER ||
+              primaryRole === RoleName.SYSTEM_ADMINISTRATOR) && (
+              <section className="view">
+                <div className="head-row">
+                  <div>
+                    <div className="kicker">Operations Administration · {roleDisplay}</div>
+                    <h1 className="page-title">Enterprise Service Delivery Center</h1>
+                    <p className="page-sub">
+                      Overseeing team workload, SLA thresholds, incident command, and live account
+                      permissions.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="stats">
+                  <div className="stat good">
+                    <span>SLA Compliance</span>
+                    <strong>96.4%</strong>
+                    <em>Organization-wide target: 95%</em>
+                  </div>
+                  <div className="stat">
+                    <span>Open Incidents</span>
+                    <strong>1 Major</strong>
+                    <em>INC-208 active</em>
+                  </div>
+                  <div className="stat">
+                    <span>Active Agents</span>
+                    <strong>8 on duty</strong>
+                    <em>Across 4 tiers</em>
+                  </div>
+                  <div className="stat">
+                    <span>Provisioned Users</span>
+                    <strong>{usersList.length || 4}</strong>
+                    <em>PostgreSQL verified</em>
+                  </div>
+                </div>
+
+                {/* Live Enterprise User Directory from Backend */}
+                <div className="card" style={{ marginTop: 20 }}>
+                  <div className="row-between" style={{ marginBottom: 14 }}>
+                    <div>
+                      <h3 style={{ margin: 0 }}>Enterprise User Directory (Live NestJS API)</h3>
+                      <p className="hint" style={{ margin: 0 }}>
+                        Protected by RBAC server guards (@Roles SYSTEM_ADMINISTRATOR, IT_MANAGER)
+                      </p>
+                    </div>
+                    <span className="pill ok">{usersList.length} Accounts in System</span>
+                  </div>
+
+                  {apiError ? (
+                    <div style={{ padding: 12, background: 'var(--rose-bg)', color: 'var(--rose)', borderRadius: 8 }}>
+                      {apiError}
+                    </div>
+                  ) : (
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>User</th>
+                          <th>Department</th>
+                          <th>Role</th>
+                          <th>Status</th>
+                          <th>Action</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {usersList.map((u) => (
+                          <tr key={u.id} className="clickable">
+                            <td>
+                              <div style={{ fontWeight: 600, color: 'var(--ink)' }}>
+                                {u.firstName} {u.lastName}
+                              </div>
+                              <div className="mono" style={{ color: 'var(--muted)', fontSize: 11 }}>
+                                {u.email}
+                              </div>
+                            </td>
+                            <td>{u.department || '—'}</td>
+                            <td>
+                              <span className="pill new">
+                                {u.userRoles?.[0]?.role?.displayName || 'Role'}
+                              </span>
+                            </td>
+                            <td>
+                              <span className="pill ok">Active</span>
+                            </td>
+                            <td>
+                              <button
+                                className="btn btn-ghost"
+                                type="button"
+                                style={{ padding: '4px 8px', fontSize: 12 }}
+                              >
+                                Edit Role
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
-
-          {primaryRole === RoleName.IT_SUPPORT_AGENT && (
-            <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800">
-              <h2 className="text-base font-semibold text-white mb-2">IT Support Agent Queue</h2>
-              <p className="text-xs text-slate-400 mb-6">
-                Module 1 has granted you access to internal notes and agent assignment capabilities.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                  <Layers className="w-5 h-5 text-indigo-400 mb-2" />
-                  <p className="text-xs font-semibold text-white">Assigned Queue</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Ready for Module 2</p>
-                </div>
-                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                  <Clock className="w-5 h-5 text-rose-400 mb-2" />
-                  <p className="text-xs font-semibold text-white">SLA Deadlines</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Ready for Module 3</p>
-                </div>
-                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                  <AlertTriangle className="w-5 h-5 text-amber-400 mb-2" />
-                  <p className="text-xs font-semibold text-white">Incident Swarming</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Ready for Module 4</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </main>
+              </section>
+            )}
+          </main>
+        </div>
       </div>
     </ProtectedRoute>
   );
 }
-
