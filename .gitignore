@@ -33,3 +33,7 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Runtime uploads
+backend/uploads/
+uploads/

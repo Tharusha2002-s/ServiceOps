@@ -1,0 +1,66 @@
+# Production & Observability Override Stack
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+services:
+  backend:
+    environment:
+      REDIS_ENABLED: "true"
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+    volumes:
+      - uploads_data:/app/uploads
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: serviceops-nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - serviceops-network
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: serviceops-prometheus
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - serviceops-network
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    container_name: serviceops-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-serviceops_grafana}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - serviceops-network
+
+volumes:
+  uploads_data:
+    name: serviceops_uploads_data
+  prometheus_data:
+    name: serviceops_prometheus_data
+  grafana_data:
+    name: serviceops_grafana_data
+

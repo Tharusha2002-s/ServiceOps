@@ -12,5 +12,16 @@ export default () => ({
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
   cookieSecret: process.env.COOKIE_SECRET || 'dev_cookie_signing_secret_serviceops_2026',
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT, 10) || 6379,
+    password: process.env.REDIS_PASSWORD || undefined,
+  },
+  smtp: {
+    host: process.env.SMTP_HOST || 'smtp.serviceops.local',
+    port: parseInt(process.env.SMTP_PORT, 10) || 587,
+    user: process.env.SMTP_USER || 'no-reply@serviceops.local',
+    pass: process.env.SMTP_PASS || 'secret',
+    from: process.env.SMTP_FROM || 'ServiceOps IT Support Desk <no-reply@serviceops.local>',
+  },
 });
-

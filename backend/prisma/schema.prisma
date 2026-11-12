@@ -47,8 +47,21 @@ model User {
   updatedAt           DateTime     @updatedAt @map("updated_at")
 
   // Relationships
-  userRoles     UserRole[]
-  refreshTokens RefreshToken[]
+  userRoles           UserRole[]
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  requestedTickets    Ticket[]            @relation("RequestedTickets")
+  assignedTickets    Ticket[]            @relation("AssignedTickets")
+  ticketComments     TicketComment[]
+  ticketAttachments  TicketAttachment[]
+  ticketActivityLogs TicketActivityLog[]
+  reportedIncidents  Incident[]          @relation("ReportedIncidents")
+  commandedIncidents Incident[]          @relation("CommandedIncidents")
+  incidentUpdates    IncidentUpdate[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  authoredArticles   KnowledgeArticle[]
+  assignedAssets     Asset[]
 
   @@map("users")
 }
@@ -83,8 +96,8 @@ model Permission {
 }
 
 model UserRole {
-  userId    String   @map("user_id")
-  roleId    String   @map("role_id")
+  userId     String   @map("user_id")
+  roleId     String   @map("role_id")
   assignedAt DateTime @default(now()) @map("assigned_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -124,3 +137,473 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique @map("token_hash")
+  userId    String    @map("user_id")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ==========================================
+// Module 2: Core Ticket Management System
+// ==========================================
+
+enum TicketType {
+  SERVICE_REQUEST
+  INCIDENT
+}
+
+enum TicketStatus {
+  NEW
+  ASSIGNED
+  IN_PROGRESS
+  PENDING_CUSTOMER
+  RESOLVED
+  CLOSED
+  CANCELLED
+}
+
+enum TicketPriority {
+  CRITICAL_P1
+  HIGH_P2
+  MEDIUM_P3
+  LOW_P4
+}
+
+enum Impact {
+  ORGANIZATION
+  DEPARTMENT
+  USER
+}
+
+enum Urgency {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum CommentType {
+  PUBLIC
+  INTERNAL_NOTE
+  SYSTEM_EVENT
+}
+
+model Category {
+  id              String         @id @default(uuid())
+  name            String         @unique
+  code            String         @unique
+  description     String?
+  icon            String?
+  defaultPriority TicketPriority @default(MEDIUM_P3) @map("default_priority")
+  subcategories   String[]       @default([])
+  isActive        Boolean        @default(true) @map("is_active")
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  // Relationships
+  tickets           Ticket[]
+  knowledgeArticles KnowledgeArticle[]
+
+  @@map("categories")
+}
+
+model Ticket {
+  id                String         @id @default(uuid())
+  ticketNumber      String         @unique @map("ticket_number")
+  title             String
+  description       String         @db.Text
+  type              TicketType     @default(SERVICE_REQUEST)
+  status            TicketStatus   @default(NEW)
+  priority          TicketPriority @default(MEDIUM_P3)
+  impact            Impact         @default(USER)
+  urgency           Urgency        @default(MEDIUM)
+  categoryId        String         @map("category_id")
+  requesterId       String         @map("requester_id")
+  assigneeId        String?        @map("assignee_id")
+  responseDueAt     DateTime?      @map("response_due_at")
+  resolutionDueAt   DateTime?      @map("resolution_due_at")
+  firstResponseAt   DateTime?      @map("first_response_at")
+  resolvedAt        DateTime?      @map("resolved_at")
+  closedAt          DateTime?      @map("closed_at")
+  resolutionSummary String?        @map("resolution_summary") @db.Text
+  incidentId        String?        @map("incident_id")
+  assetId           String?        @map("asset_id")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  // Relationships
+  category     Category            @relation(fields: [categoryId], references: [id])
+  requester    User                @relation("RequestedTickets", fields: [requesterId], references: [id])
+  assignee     User?               @relation("AssignedTickets", fields: [assigneeId], references: [id])
+  incident     Incident?           @relation(fields: [incidentId], references: [id])
+  asset        Asset?              @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  comments     TicketComment[]
+  attachments  TicketAttachment[]
+  activityLogs TicketActivityLog[]
+  slaSnapshot  TicketSlaSnapshot?
+
+  @@index([status])
+  @@index([priority])
+  @@index([requesterId])
+  @@index([assigneeId])
+  @@index([incidentId])
+  @@map("tickets")
+}
+
+model TicketComment {
+  id        String      @id @default(uuid())
+  ticketId  String      @map("ticket_id")
+  authorId  String      @map("author_id")
+  type      CommentType @default(PUBLIC)
+  content   String      @db.Text
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  // Relationships
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id])
+
+  @@index([ticketId])
+  @@index([type])
+  @@map("ticket_comments")
+}
+
+model TicketAttachment {
+  id         String   @id @default(uuid())
+  ticketId   String   @map("ticket_id")
+  uploaderId String   @map("uploader_id")
+  fileName   String   @map("file_name")
+  fileSize   Int      @map("file_size")
+  mimeType   String   @map("mime_type")
+  storageKey String   @map("storage_key")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relationships
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  uploader User   @relation(fields: [uploaderId], references: [id])
+
+  @@index([ticketId])
+  @@map("ticket_attachments")
+}
+
+model TicketActivityLog {
+  id        String   @id @default(uuid())
+  ticketId  String   @map("ticket_id")
+  actorId   String?  @map("actor_id")
+  action    String
+  oldValue  String?  @map("old_value")
+  newValue  String?  @map("new_value")
+  details   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relationships
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actor  User?  @relation(fields: [actorId], references: [id])
+
+  @@index([ticketId])
+  @@map("ticket_activity_logs")
+}
+
+// ==========================================
+// Module 3: SLA Engine & Escalation Architecture
+// ==========================================
+
+enum SlaStatus {
+  ON_TRACK
+  AT_RISK
+  BREACHED
+  PAUSED
+  MET
+}
+
+model SlaPolicy {
+  id                      String         @id @default(uuid())
+  name                    String         @unique
+  priority                TicketPriority @unique
+  description             String?
+  responseTargetMinutes   Int            @map("response_target_minutes")
+  resolutionTargetMinutes Int            @map("resolution_target_minutes")
+  businessHoursOnly       Boolean        @default(true) @map("business_hours_only")
+  warningThresholdPct     Int            @default(75) @map("warning_threshold_pct")
+  businessStartHour       Int            @default(8) @map("business_start_hour") // 08:00
+  businessEndHour         Int            @default(18) @map("business_end_hour") // 18:00
+  createdAt               DateTime       @default(now()) @map("created_at")
+  updatedAt               DateTime       @updatedAt @map("updated_at")
+
+  // Relationships
+  ticketSnapshots TicketSlaSnapshot[]
+
+  @@map("sla_policies")
+}
+
+model TicketSlaSnapshot {
+  id                      String    @id @default(uuid())
+  ticketId                String    @unique @map("ticket_id")
+  policyId                String    @map("policy_id")
+  responseTargetMinutes   Int       @map("response_target_minutes")
+  resolutionTargetMinutes Int       @map("resolution_target_minutes")
+  responseDueAt           DateTime  @map("response_due_at")
+  resolutionDueAt         DateTime  @map("resolution_due_at")
+  firstResponseAt         DateTime? @map("first_response_at")
+  resolvedAt              DateTime? @map("resolved_at")
+  isResponseMet           Boolean?  @map("is_response_met")
+  isResolutionMet         Boolean?  @map("is_resolution_met")
+  pausedAt                DateTime? @map("paused_at")
+  totalPausedMinutes      Int       @default(0) @map("total_paused_minutes")
+  warningNotifiedAt       DateTime? @map("warning_notified_at")
+  breachNotifiedAt        DateTime? @map("breach_notified_at")
+  status                  SlaStatus @default(ON_TRACK)
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  // Relationships
+  ticket Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  policy SlaPolicy @relation(fields: [policyId], references: [id])
+
+  @@index([status])
+  @@index([responseDueAt])
+  @@index([resolutionDueAt])
+  @@map("ticket_sla_snapshots")
+}
+
+// ==========================================
+// Module 4: Incident Management & War-Rooms
+// ==========================================
+
+enum IncidentSeverity {
+  CRITICAL_P1
+  HIGH_P2
+  MEDIUM_P3
+  LOW_P4
+}
+
+enum IncidentStatus {
+  DECLARED
+  INVESTIGATING
+  MITIGATED
+  MONITORING
+  RESOLVED
+}
+
+model Incident {
+  id             String           @id @default(uuid())
+  incidentNumber String           @unique @map("incident_number") // INC-208
+  title          String
+  description    String           @db.Text
+  severity       IncidentSeverity @default(HIGH_P2)
+  status         IncidentStatus   @default(INVESTIGATING)
+  impactScope    String?          @map("impact_scope") // e.g. "All office locations"
+  rootCause      String?          @map("root_cause") @db.Text
+  workaround     String?          @db.Text
+  reporterId     String           @map("reporter_id")
+  commanderId    String?          @map("commander_id")
+  resolvedAt     DateTime?        @map("resolved_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  reporter       User             @relation("ReportedIncidents", fields: [reporterId], references: [id])
+  commander      User?            @relation("CommandedIncidents", fields: [commanderId], references: [id])
+  updates        IncidentUpdate[]
+  linkedTickets  Ticket[]
+
+  @@map("incidents")
+}
+
+model IncidentUpdate {
+  id         String   @id @default(uuid())
+  incidentId String   @map("incident_id")
+  authorId   String   @map("author_id")
+  message    String   @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  author     User     @relation(fields: [authorId], references: [id])
+
+  @@map("incident_updates")
+}
+
+// ==========================================
+// Module 5: Notifications & Async Delivery
+// ==========================================
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum NotificationType {
+  TICKET_CREATED
+  TICKET_ASSIGNED
+  TICKET_UPDATED
+  TICKET_COMMENTED
+  TICKET_RESOLVED
+  TICKET_CLOSED
+  SLA_WARNING
+  SLA_BREACHED
+  INCIDENT_DECLARED
+  INCIDENT_UPDATED
+  SYSTEM
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  recipientId String           @map("recipient_id")
+  type        NotificationType @default(SYSTEM)
+  title       String
+  message     String           @db.Text
+  entityType  String?          @map("entity_type")
+  entityId    String?          @map("entity_id")
+  linkUrl     String?          @map("link_url")
+  isRead      Boolean          @default(false) @map("is_read")
+  readAt      DateTime?        @map("read_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  recipient   User                   @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  deliveries  NotificationDelivery[]
+
+  @@index([recipientId, isRead, createdAt])
+  @@map("notifications")
+}
+
+model NotificationDelivery {
+  id             String              @id @default(uuid())
+  notificationId String              @map("notification_id")
+  channel        NotificationChannel
+  status         DeliveryStatus      @default(PENDING)
+  attempts       Int                 @default(0)
+  lastError      String?             @map("last_error") @db.Text
+  sentAt         DateTime?           @map("sent_at")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId, channel])
+  @@map("notification_deliveries")
+}
+
+// ==========================================
+// Module 6: Audit Trail & Admin Configuration
+// ==========================================
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  actorId      String?  @map("actor_id")
+  actorEmail   String   @default("system@serviceops.local") @map("actor_email")
+  actorName    String   @default("System") @map("actor_name")
+  action       String
+  module       String
+  resourceType String   @map("resource_type")
+  resourceId   String?  @map("resource_id")
+  ipAddress    String?  @map("ip_address")
+  beforeState  Json?    @map("before_state")
+  afterState   Json?    @map("after_state")
+  metadata     Json?
+  checksum     String
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  actor        User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([action, createdAt])
+  @@index([module, createdAt])
+  @@index([actorId])
+  @@map("audit_logs")
+}
+
+model PlatformSetting {
+  key         String   @id
+  category    String
+  value       String   @db.Text
+  updatedById String?  @map("updated_by_id")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_settings")
+}
+
+// ==========================================
+// Module 7 (Extended): Knowledge Base & IT Assets
+// ==========================================
+
+enum KnowledgeStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model KnowledgeArticle {
+  id           String          @id @default(uuid())
+  slug         String          @unique
+  title        String
+  summary      String?
+  content      String          @db.Text
+  categoryId   String?         @map("category_id")
+  status       KnowledgeStatus @default(DRAFT)
+  authorId     String          @map("author_id")
+  readMinutes  Int             @default(3) @map("read_minutes")
+  helpfulCount Int             @default(0) @map("helpful_count")
+  viewsCount   Int             @default(0) @map("views_count")
+  tags         String[]        @default([])
+  publishedAt  DateTime?       @map("published_at")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  author   User      @relation(fields: [authorId], references: [id])
+
+  @@index([status, createdAt])
+  @@map("knowledge_articles")
+}
+
+enum AssetStatus {
+  IN_SERVICE
+  IN_REPAIR
+  FAILED
+  RETIRED
+  SPARE
+}
+
+enum AssetType {
+  LAPTOP
+  DESKTOP
+  DOCK
+  MONITOR
+  PRINTER
+  NETWORK
+  LICENSE
+  OTHER
+}
+
+model Asset {
+  id            String      @id @default(uuid())
+  assetTag      String      @unique @map("asset_tag")
+  name          String
+  assetType     AssetType   @default(LAPTOP) @map("asset_type")
+  serialNumber  String?     @map("serial_number")
+  location      String?
+  status        AssetStatus @default(IN_SERVICE)
+  assignedToId  String?     @map("assigned_to_id")
+  warrantyUntil DateTime?   @map("warranty_until")
+  notes         String?     @db.Text
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  assignedTo User?    @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  tickets    Ticket[]
+
+  @@index([status])
+  @@index([assignedToId])
+  @@map("assets")
+}

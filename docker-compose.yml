@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL 18 Primary Relational Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: serviceops-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      POSTGRES_DB: ${POSTGRES_DB:-serviceops_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d serviceops_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - serviceops-network
+
+  # 2. Redis 7 In-Memory Cache & Job Queue Broker
+  redis:
+    image: redis:7-alpine
+    container_name: serviceops-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - serviceops-network
+
+  # 3. ServiceOps Backend Engine (NestJS Modular Monolith)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: serviceops-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      CORS_ORIGIN: http://localhost:3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@postgres:5432/${POSTGRES_DB:-serviceops_db}?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-prod_access_secret_serviceops_32_chars_min}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-prod_refresh_secret_serviceops_32_chars_min}
+      COOKIE_SECRET: ${COOKIE_SECRET:-prod_cookie_secret_serviceops_2026}
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4000/api/v1/health/liveness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - serviceops-network
+
+  # 4. ServiceOps Frontend Web Client (Next.js 14 App Router)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: serviceops-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      NEXT_PUBLIC_API_URL: /api/v1
+    ports:
+      - "3000:3000"
+    networks:
+      - serviceops-network
+
+volumes:
+  postgres_data:
+    name: serviceops_postgres_data
+  redis_data:
+    name: serviceops_redis_data
+
+networks:
+  serviceops-network:
+    name: serviceops-network
+    driver: bridge
+

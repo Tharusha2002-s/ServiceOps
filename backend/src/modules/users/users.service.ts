@@ -1,12 +1,21 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as argon2 from 'argon2';
-import { UserStatus } from '@prisma/client';
+import { RoleName, UserStatus } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) { }
 
   async findAll() {
     return this.prisma.user.findMany({
@@ -55,7 +64,7 @@ export class UsersService {
     return sanitized;
   }
 
-  async create(dto: CreateUserDto) {
+  async create(dto: CreateUserDto, actor?: any) {
     const existing = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase().trim() },
     });
@@ -103,17 +112,32 @@ export class UsersService {
       },
     });
 
+    await this.auditService.record({
+      actorId: actor?.id,
+      actorEmail: actor?.email,
+      actorName: actor ? `${actor.firstName} ${actor.lastName}` : undefined,
+      action: 'user.create',
+      module: 'users',
+      resourceType: 'User',
+      resourceId: user.email,
+      afterState: { email: user.email, role: dto.role, status: user.status },
+    });
+
     const { passwordHash: _, ...sanitized } = user;
     return sanitized;
   }
 
-  async setUserStatus(id: string, status: UserStatus) {
+  async setUserStatus(id: string, status: UserStatus, actor?: any) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    return this.prisma.user.update({
+    if (actor?.id === id && status !== UserStatus.ACTIVE) {
+      throw new BadRequestException('You cannot suspend or deactivate your own administrator account.');
+    }
+
+    const updated = await this.prisma.user.update({
       where: { id },
       data: {
         status,
@@ -127,6 +151,62 @@ export class UsersService {
         updatedAt: true,
       },
     });
+
+    await this.auditService.record({
+      actorId: actor?.id,
+      actorEmail: actor?.email,
+      actorName: actor ? `${actor.firstName} ${actor.lastName}` : undefined,
+      action: status === UserStatus.ACTIVE && user.status === UserStatus.LOCKED ? 'auth.unlock' : 'user.status',
+      module: 'users',
+      resourceType: 'User',
+      resourceId: updated.email,
+      beforeState: { status: user.status },
+      afterState: { status: updated.status },
+    });
+
+    return updated;
+  }
+
+  async updateUserRole(id: string, newRole: RoleName, actor?: any) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { userRoles: { include: { role: true } } },
+    });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    if (actor?.id === id && newRole !== RoleName.SYSTEM_ADMINISTRATOR) {
+      throw new BadRequestException('You cannot downgrade your own System Administrator role.');
+    }
+
+    const targetRole = await this.prisma.role.findUnique({ where: { name: newRole } });
+    if (!targetRole) {
+      throw new NotFoundException(`Role ${newRole} not found`);
+    }
+
+    const prevRoles = user.userRoles.map((ur) => ur.role.name);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userRole.deleteMany({ where: { userId: id } });
+      await tx.userRole.create({
+        data: { userId: id, roleId: targetRole.id },
+      });
+    });
+
+    await this.auditService.record({
+      actorId: actor?.id,
+      actorEmail: actor?.email,
+      actorName: actor ? `${actor.firstName} ${actor.lastName}` : undefined,
+      action: 'role.grant',
+      module: 'users',
+      resourceType: 'User',
+      resourceId: user.email,
+      beforeState: { roles: prevRoles },
+      afterState: { roles: [newRole] },
+    });
+
+    return this.findById(id);
   }
 }
 

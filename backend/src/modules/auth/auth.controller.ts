@@ -14,6 +14,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { RegisterDto } from './dto/register.dto';
+import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
 import { Public } from '@/common/decorators/public.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
@@ -118,6 +120,44 @@ export class AuthController {
     return {
       statusCode: HttpStatus.OK,
       data: user,
+    };
+  }
+
+  @Public()
+  @Post('register')
+  @ApiOperation({ summary: 'Employee self-registration (strictly enforces EMPLOYEE role per BR-001)' })
+  @ApiResponse({ status: 201, description: 'Account created with default Employee role' })
+  @ApiResponse({ status: 409, description: 'Email already registered' })
+  async register(@Body() registerDto: RegisterDto) {
+    const user = await this.authService.register(registerDto);
+    return {
+      statusCode: HttpStatus.CREATED,
+      message: 'Account registered with Employee role. Please sign in.',
+      data: user,
+    };
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request single-use password reset token (anti-enumeration safe)' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    const result = await this.authService.requestPasswordReset(dto.email);
+    return {
+      statusCode: HttpStatus.OK,
+      ...result,
+    };
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset user password using cryptographic single-use token' })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    const result = await this.authService.resetPassword(dto);
+    return {
+      statusCode: HttpStatus.OK,
+      ...result,
     };
   }
 }

@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
@@ -12,6 +13,13 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get<number>('port') || 4000;
   const corsOrigin = configService.get<string>('corsOrigin') || 'http://localhost:3000';
+
+  // 0. OWASP Security Headers via Helmet
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
 
   // 1. Cookie Parser Middleware for Secure Refresh Tokens
   app.use(cookieParser(configService.get<string>('cookieSecret')));
