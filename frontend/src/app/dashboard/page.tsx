@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { Menu, X, Search, Bell, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { RoleName, TicketStatus, TicketPriority } from '@/types/auth';
@@ -28,10 +29,16 @@ export default function DashboardPage() {
 
   // View state: 'home' | 'desk' | 'assignment' | 'incidents' | 'notifications' | 'requests' | 'new' | 'ticket' | 'users' | 'sla'
   const [activeTab, setActiveTab] = useState('home');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [selectedTicketNumber, setSelectedTicketNumber] = useState<string>('TKT-1042');
   const [selectedIncidentNumber, setSelectedIncidentNumber] = useState<string | null>(null);
   const [activeOutage, setActiveOutage] = useState<any | null>(null);
   const [showOutageModal, setShowOutageModal] = useState<boolean>(false);
+
+  const handleNavClick = (tab: string) => {
+    setActiveTab(tab);
+    setMobileNavOpen(false);
+  };
 
   // Data states
   const [tickets, setTickets] = useState<any[]>([]);
@@ -389,11 +396,13 @@ export default function DashboardPage() {
     setTicketPane('talk');
     setShowResolveBox(false);
     setActiveTab('ticket');
+    setMobileNavOpen(false);
   };
 
   const openIncidentView = (incNum?: string) => {
     setSelectedIncidentNumber(incNum || null);
     setActiveTab('incidents');
+    setMobileNavOpen(false);
   };
 
   const handleMarkNotifRead = async (id: string) => {
@@ -504,23 +513,42 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute>
       <div id="app" className="screen is-on" data-screen="app">
+        {/* Mobile Navigation Drawer Backdrop */}
+        {mobileNavOpen && (
+          <div
+            className="rail-backdrop"
+            onClick={() => setMobileNavOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
         {/* Left Navigation Rail */}
-        <aside className="rail">
-          <div className="rail-brand">
-            <span className="mark">
-              <i></i>
-            </span>
-            <div>
-              <strong>ServiceOps</strong>
-              <span>Northwind Internal IT</span>
+        <aside className={`rail ${mobileNavOpen ? 'is-open' : ''}`}>
+          <div className="rail-header">
+            <div className="rail-brand">
+              <span className="mark">
+                <i></i>
+              </span>
+              <div>
+                <strong>ServiceOps</strong>
+                <span>Northwind Internal IT</span>
+              </div>
             </div>
+            <button
+              type="button"
+              className="rail-close-btn"
+              onClick={() => setMobileNavOpen(false)}
+              aria-label="Close navigation"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           <nav id="nav" aria-label="Primary">
             <button
               type="button"
               aria-current={activeTab === 'home' && primaryRole !== RoleName.IT_SUPPORT_AGENT ? 'page' : undefined}
-              onClick={() => setActiveTab('home')}
+              onClick={() => handleNavClick('home')}
             >
               Home
             </button>
@@ -530,7 +558,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 aria-current={activeTab === 'desk' || (activeTab === 'home' && primaryRole === RoleName.IT_SUPPORT_AGENT) ? 'page' : undefined}
-                onClick={() => setActiveTab('desk')}
+                onClick={() => handleNavClick('desk')}
               >
                 Agent Desk ({tickets.filter((t) => t.assigneeId === user?.id || t.assignee?.id === user?.id).length})
               </button>
@@ -538,14 +566,14 @@ export default function DashboardPage() {
             <button
               type="button"
               aria-current={activeTab === 'requests' ? 'page' : undefined}
-              onClick={() => setActiveTab('requests')}
+              onClick={() => handleNavClick('requests')}
             >
               {primaryRole === RoleName.EMPLOYEE ? `My Requests (${tickets.length})` : `All Tickets (${tickets.length})`}
             </button>
             <button
               type="button"
               aria-current={activeTab === 'new' ? 'page' : undefined}
-              onClick={() => setActiveTab('new')}
+              onClick={() => handleNavClick('new')}
             >
               + New Request
             </button>
@@ -567,7 +595,7 @@ export default function DashboardPage() {
                 type="button"
                 aria-current={activeTab === 'sla' ? 'page' : undefined}
                 onClick={() => {
-                  setActiveTab('sla');
+                  handleNavClick('sla');
                   fetchSlaData();
                 }}
               >
@@ -579,7 +607,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 aria-current={activeTab === 'assignment' ? 'page' : undefined}
-                onClick={() => setActiveTab('assignment')}
+                onClick={() => handleNavClick('assignment')}
               >
                 Assignment Desk ({tickets.filter((t) => !t.assigneeId && !t.assignee && t.status !== 'CLOSED' && t.status !== 'RESOLVED').length})
               </button>
@@ -589,7 +617,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 aria-current={activeTab === 'reports' ? 'page' : undefined}
-                onClick={() => setActiveTab('reports')}
+                onClick={() => handleNavClick('reports')}
               >
                 Reports &amp; Analytics
               </button>
@@ -599,7 +627,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 aria-current={activeTab === 'users' ? 'page' : undefined}
-                onClick={() => setActiveTab('users')}
+                onClick={() => handleNavClick('users')}
               >
                 {primaryRole === RoleName.SYSTEM_ADMINISTRATOR ? 'People & Roles' : 'Enterprise Directory'}
               </button>
@@ -608,7 +636,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 aria-current={activeTab === 'categories' ? 'page' : undefined}
-                onClick={() => setActiveTab('categories')}
+                onClick={() => handleNavClick('categories')}
               >
                 Categories
               </button>
@@ -618,7 +646,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 aria-current={activeTab === 'audit' ? 'page' : undefined}
-                onClick={() => setActiveTab('audit')}
+                onClick={() => handleNavClick('audit')}
               >
                 Audit Trail
               </button>
@@ -627,7 +655,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 aria-current={activeTab === 'settings' ? 'page' : undefined}
-                onClick={() => setActiveTab('settings')}
+                onClick={() => handleNavClick('settings')}
               >
                 Settings
               </button>
@@ -635,7 +663,7 @@ export default function DashboardPage() {
             <button
               type="button"
               aria-current={activeTab === 'knowledge' ? 'page' : undefined}
-              onClick={() => setActiveTab('knowledge')}
+              onClick={() => handleNavClick('knowledge')}
             >
               Knowledge Base
             </button>
@@ -645,7 +673,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 aria-current={activeTab === 'assets' ? 'page' : undefined}
-                onClick={() => setActiveTab('assets')}
+                onClick={() => handleNavClick('assets')}
               >
                 IT Assets CMDB
               </button>
@@ -672,13 +700,34 @@ export default function DashboardPage() {
         <div className="workspace">
           {/* Top Sticky Header */}
           <header className="top">
+            <button
+              type="button"
+              className="hamburger-btn"
+              aria-label="Toggle navigation menu"
+              aria-expanded={mobileNavOpen}
+              onClick={() => setMobileNavOpen(!mobileNavOpen)}
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
             <div className="search">
+              <Search className="search-icon w-4 h-4" />
               <input
                 id="q"
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
                 placeholder="Search tickets, incidents, people, assets..."
               />
+              {globalSearch.trim().length > 0 && (
+                <button
+                  type="button"
+                  className="search-clear-btn"
+                  onClick={() => setGlobalSearch('')}
+                  aria-label="Clear search query"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
               {globalSearch.trim().length > 0 && (
                 <div className="search-pop" role="listbox" style={{ display: 'block' }}>
                   {tickets
@@ -725,23 +774,32 @@ export default function DashboardPage() {
             </div>
 
             <div className="top-meta">
-              <span className="live">
-                <i></i> {wsConnected ? 'Desk live' : 'Sync active'}
+              <span className="live" title={wsConnected ? 'Real-time WebSocket connected' : 'Active polling sync'}>
+                <i></i>
+                <span className="live-label">{wsConnected ? 'Desk live' : 'Sync active'}</span>
               </span>
-              <span>Colombo Office · {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               <button
                 className="icon-btn"
                 type="button"
                 aria-label="Notifications"
                 onClick={() => {
                   void fetchNotifications();
-                  setActiveTab('notifications');
+                  handleNavClick('notifications');
                 }}
               >
-                Inbox {unreadNotifCount > 0 && <span className="badge">{unreadNotifCount}</span>}
+                <Bell className="w-4 h-4" />
+                <span className="btn-label">Inbox</span>
+                {unreadNotifCount > 0 && <span className="badge">{unreadNotifCount}</span>}
               </button>
-              <button className="icon-btn" type="button" id="signout" onClick={() => logout()}>
-                Sign out
+              <button
+                className="icon-btn signout-btn"
+                type="button"
+                id="signout"
+                onClick={() => logout()}
+                title="Sign out of ServiceOps"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="btn-label">Sign out</span>
               </button>
             </div>
           </header>
@@ -878,7 +936,7 @@ export default function DashboardPage() {
                 <div className="hero-search-box">
                   <div className="head-row" style={{ marginBottom: 14 }}>
                     <div>
-                      <div className="kicker">Self-Service Portal · Colombo Office</div>
+                      <div className="kicker">Self-Service Portal · IT Service Desk</div>
                       <h1 className="page-title" style={{ fontSize: 32 }}>
                         Good afternoon, {user?.firstName}.
                       </h1>

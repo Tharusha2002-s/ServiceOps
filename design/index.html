@@ -53,45 +53,14 @@
   a:hover { text-decoration: underline; }
 
   .proto {
-    position: sticky;
-    top: 0;
-    z-index: 40;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 8px 16px;
-    background: #11100e;
-    color: #f4efe6;
-    border-bottom: 1px solid #2c2822;
-  }
-  .proto-mark {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #c9c1b4;
-    white-space: nowrap;
-  }
-  .proto select, .roles button {
-    background: #24211c;
-    color: #f4efe6;
-    border: 1px solid #3a342c;
-    border-radius: 8px;
-    padding: 6px 10px;
-  }
-  .proto select { min-width: 220px; }
-  .roles { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
-  .roles button[aria-pressed="true"] {
-    background: var(--copper);
-    border-color: var(--copper);
-    color: white;
+    display: none !important;
   }
   .screen { display: none; }
   .screen.is-on { display: block; }
-  #app.screen.is-on { display: grid; grid-template-columns: 248px 1fr; min-height: calc(100vh - 45px); }
+  #app.screen.is-on { display: grid; grid-template-columns: 248px 1fr; min-height: 100vh; }
 
   .auth {
-    min-height: calc(100vh - 45px);
+    min-height: 100vh;
     display: grid;
     grid-template-columns: 1.15fr 0.85fr;
   }
@@ -157,13 +126,14 @@
   .rail {
     background: var(--rail);
     color: var(--rail-text);
-    padding: 20px 14px 16px;
+    padding: 16px 14px 16px;
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 16px;
     position: sticky;
-    top: 45px;
-    height: calc(100vh - 45px);
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
   }
   .rail-brand { display: flex; gap: 10px; align-items: center; padding: 0 8px; }
   .rail-brand strong { display: block; font-size: 16px; font-weight: 600; }
@@ -176,12 +146,13 @@
     border: 0;
     border-radius: 9px;
     padding: 9px 10px;
+    font-size: 14px;
   }
-  nav button[aria-current="page"] { background: var(--rail-2); color: var(--rail-text); }
+  nav button[aria-current="page"] { background: var(--rail-2); color: var(--rail-text); font-weight: 500; }
   nav button:hover { color: var(--rail-text); }
   .who {
     margin-top: auto;
-    padding: 12px;
+    padding: 12px 8px 4px;
     border-top: 1px solid #322e28;
     display: grid;
     grid-template-columns: 36px 1fr;
@@ -193,15 +164,18 @@
     display: grid; place-items: center;
     background: #3a3028; color: #f4efe6; font-size: 12px; font-weight: 600;
   }
-  .who small { color: var(--rail-muted); display: block; }
+  .who strong { display: block; font-size: 13px; font-weight: 600; }
+  .who small { color: var(--rail-muted); display: block; font-size: 11px; }
 
-  .workspace { min-width: 0; }
+  .workspace { min-width: 0; display: flex; flex-direction: column; min-height: 100vh; }
   .top {
-    display: flex; align-items: center; gap: 16px;
-    padding: 14px 28px;
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 28px;
     border-bottom: 1px solid var(--line);
-    background: rgba(243, 239, 230, 0.92);
-    position: sticky; top: 45px; z-index: 5;
+    background: rgba(243, 239, 230, 0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 30;
   }
   .search { position: relative; flex: 1; max-width: 560px; }
   .search input { background: white; }
@@ -1052,7 +1026,6 @@
         </div>
         <div class="top-meta">
           <span class="live"><i></i> Desk live</span>
-          <span>Colombo · 14:10</span>
           <button class="icon-btn" type="button" data-go="notifications" aria-label="Notifications">Inbox <span class="badge">3</span></button>
           <button class="icon-btn" type="button" id="signout">Sign out</button>
         </div>
