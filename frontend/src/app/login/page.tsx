@@ -315,7 +315,7 @@ export default function LoginPage() {
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
 
-              {/* Interactive Demo Quick-Fill Bar */}
+              {/* System Administrator Initial Login Notice */}
               <div
                 style={{
                   marginTop: 24,
@@ -323,92 +323,44 @@ export default function LoginPage() {
                   borderTop: '1px solid var(--line)',
                 }}
               >
-                <span
-                  style={{
-                    display: 'block',
-                    fontFamily: 'var(--mono)',
-                    fontSize: 11,
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                    color: 'var(--muted)',
-                    marginBottom: 10,
-                    textAlign: 'center',
-                  }}
-                >
-                  Test Accounts (Pre-Seeded)
-                </span>
-
                 <div
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gap: 8,
+                    background: 'var(--card-2)',
+                    border: '1px solid var(--line)',
+                    borderRadius: 10,
+                    padding: 12,
                   }}
                 >
-                  <button
-                    type="button"
-                    onClick={() => setQuickCredentials('employee@serviceops.local')}
-                    className="btn btn-ghost"
-                    style={{
-                      fontSize: 12,
-                      padding: '8px 10px',
-                      justifyContent: 'flex-start',
-                      borderRadius: 8,
-                    }}
-                  >
-                    <span style={{ color: 'var(--sky)', fontWeight: 600 }}>Employee</span>
-                    <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 'auto' }}>Amina</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setQuickCredentials('agent@serviceops.local')}
-                    className="btn btn-ghost"
-                    style={{
-                      fontSize: 12,
-                      padding: '8px 10px',
-                      justifyContent: 'flex-start',
-                      borderRadius: 8,
-                    }}
-                  >
-                    <span style={{ color: 'var(--moss)', fontWeight: 600 }}>Agent</span>
-                    <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 'auto' }}>Elena</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setQuickCredentials('manager@serviceops.local')}
-                    className="btn btn-ghost"
-                    style={{
-                      fontSize: 12,
-                      padding: '8px 10px',
-                      justifyContent: 'flex-start',
-                      borderRadius: 8,
-                    }}
-                  >
-                    <span style={{ color: 'var(--amber)', fontWeight: 600 }}>Manager</span>
-                    <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 'auto' }}>Marcus</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setQuickCredentials('admin@serviceops.local')}
-                    className="btn btn-ghost"
-                    style={{
-                      fontSize: 12,
-                      padding: '8px 10px',
-                      justifyContent: 'flex-start',
-                      borderRadius: 8,
-                    }}
-                  >
-                    <span style={{ color: 'var(--rose)', fontWeight: 600 }}>Admin</span>
-                    <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 'auto' }}>Sarah</span>
-                  </button>
+                  <div className="row-between">
+                    <div>
+                      <span
+                        style={{
+                          display: 'block',
+                          fontFamily: 'var(--mono)',
+                          fontSize: 11,
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase',
+                          color: 'var(--copper)',
+                          fontWeight: 600,
+                        }}
+                      >
+                        System Administrator
+                      </span>
+                      <strong style={{ fontSize: 13, display: 'block', marginTop: 2 }}>admin@serviceops.local</strong>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setQuickCredentials('admin@serviceops.local')}
+                      className="btn btn-ghost"
+                      style={{ fontSize: 12, padding: '4px 10px' }}
+                    >
+                      Fill Admin
+                    </button>
+                  </div>
+                  <p className="hint" style={{ marginTop: 8, fontSize: 11 }}>
+                    Production environment: Only System Administrator is initialized. Employees self-register via &ldquo;Create employee account&rdquo; below, and IT Support roles are assigned in People &amp; Roles.
+                  </p>
                 </div>
-
-                <p className="hint" style={{ textAlign: 'center', marginTop: 10 }}>
-                  Default Password: <code className="mono">Password@123</code>
-                </p>
               </div>
             </form>
           )}

@@ -30,7 +30,7 @@ export default function DashboardPage() {
   // View state: 'home' | 'desk' | 'assignment' | 'incidents' | 'notifications' | 'requests' | 'new' | 'ticket' | 'users' | 'sla'
   const [activeTab, setActiveTab] = useState('home');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [selectedTicketNumber, setSelectedTicketNumber] = useState<string>('TKT-1042');
+  const [selectedTicketNumber, setSelectedTicketNumber] = useState<string | null>(null);
   const [selectedIncidentNumber, setSelectedIncidentNumber] = useState<string | null>(null);
   const [activeOutage, setActiveOutage] = useState<any | null>(null);
   const [showOutageModal, setShowOutageModal] = useState<boolean>(false);
@@ -1050,49 +1050,57 @@ export default function DashboardPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {tickets.slice(0, 5).map((t) => (
-                            <tr key={t.id} className="clickable" onClick={() => openTicketView(t.ticketNumber)}>
-                              <td>
-                                <div className="mono">{t.ticketNumber}</div>
-                                <div className="subject">{t.title}</div>
-                              </td>
-                              <td>
-                                <span className="badge-tag">{t.category?.name || 'General'}</span>
-                              </td>
-                              <td>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                  <span
-                                    style={{
-                                      width: 22,
-                                      height: 22,
-                                      borderRadius: '50%',
-                                      background: '#3a3028',
-                                      color: 'white',
-                                      fontSize: 10,
-                                      display: 'grid',
-                                      placeItems: 'center',
-                                    }}
-                                  >
-                                    {t.assignee ? `${t.assignee.firstName[0]}${t.assignee.lastName[0]}` : '—'}
-                                  </span>
-                                  <span style={{ fontSize: 13 }}>
-                                    {t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : 'Unassigned'}
-                                  </span>
-                                </div>
-                              </td>
-                              <td>{getStatusPill(t.status)}</td>
-                              <td>{getTicketSlaPill(t)}</td>
-                              <td>
-                                <button
-                                  className="btn btn-ghost"
-                                  type="button"
-                                  style={{ padding: '4px 8px', fontSize: 12 }}
-                                >
-                                  View
-                                </button>
+                          {tickets.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--muted)' }}>
+                                No active service requests. Click &ldquo;+ New request&rdquo; to submit a ticket.
                               </td>
                             </tr>
-                          ))}
+                          ) : (
+                            tickets.slice(0, 5).map((t) => (
+                              <tr key={t.id} className="clickable" onClick={() => openTicketView(t.ticketNumber)}>
+                                <td>
+                                  <div className="mono">{t.ticketNumber}</div>
+                                  <div className="subject">{t.title}</div>
+                                </td>
+                                <td>
+                                  <span className="badge-tag">{t.category?.name || 'General'}</span>
+                                </td>
+                                <td>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <span
+                                      style={{
+                                        width: 22,
+                                        height: 22,
+                                        borderRadius: '50%',
+                                        background: '#3a3028',
+                                        color: 'white',
+                                        fontSize: 10,
+                                        display: 'grid',
+                                        placeItems: 'center',
+                                      }}
+                                    >
+                                      {t.assignee ? `${t.assignee.firstName[0]}${t.assignee.lastName[0]}` : '—'}
+                                    </span>
+                                    <span style={{ fontSize: 13 }}>
+                                      {t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : 'Unassigned'}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td>{getStatusPill(t.status)}</td>
+                                <td>{getTicketSlaPill(t)}</td>
+                                <td>
+                                  <button
+                                    className="btn btn-ghost"
+                                    type="button"
+                                    style={{ padding: '4px 8px', fontSize: 12 }}
+                                  >
+                                    View
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
                         </tbody>
                       </table>
                     </div>

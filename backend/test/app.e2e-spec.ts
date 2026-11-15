@@ -31,6 +31,17 @@ describe('ServiceOps Enterprise ITSM API (Supertest E2E + OWASP Security)', () =
 
     await app.init();
 
+    // Register test employee account
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/register')
+      .send({
+        email: 'employee@serviceops.local',
+        password: 'Password@123',
+        firstName: 'Amina',
+        lastName: 'Perera',
+        department: 'Finance',
+      });
+
     const empLogin = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ email: 'employee@serviceops.local', password: 'Password@123' })
