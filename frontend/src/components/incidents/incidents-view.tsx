@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { CheckCircle2, AlertOctagon, X, Flame, ShieldAlert } from 'lucide-react';
 import { api } from '@/lib/api';
 import { RoleName } from '@/types/auth';
 
@@ -233,7 +234,7 @@ export function IncidentsView({
                 key={st}
                 className={`inc-step ${isDone ? 'done' : ''} ${isActive ? 'active' : ''}`}
               >
-                {isDone ? '✓ ' : isActive ? '● ' : '○ '}
+                {isDone ? <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" /> : isActive ? '● ' : '○ '}
                 {st.charAt(0) + st.slice(1).toLowerCase()}
               </div>
             );
@@ -463,13 +464,13 @@ export function IncidentsView({
                       <button
                         className="btn btn-ghost"
                         type="button"
-                        style={{ borderColor: 'var(--moss)', color: 'var(--moss)' }}
+                        style={{ borderColor: 'var(--moss)', color: 'var(--moss)', display: 'inline-flex', alignItems: 'center' }}
                         onClick={() => {
                           setPendingTransition('RESOLVED');
                           setTransitionNote('Resolved underlying service degradation and restored normal operations.');
                         }}
                       >
-                        ✓ Mark Incident Resolved
+                        <CheckCircle2 className="w-4 h-4 mr-1.5" /> Mark Incident Resolved
                       </button>
                     )}
                   </div>
@@ -642,7 +643,7 @@ export function IncidentsView({
                 onClick={() => setShowDeclareModal(false)}
                 style={{ padding: '2px 8px' }}
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -703,9 +704,10 @@ export function IncidentsView({
                   className="btn btn-primary"
                   type="submit"
                   disabled={declaring}
-                  style={{ background: 'var(--rose)' }}
+                  style={{ background: 'var(--rose)', display: 'inline-flex', alignItems: 'center' }}
                 >
-                  {declaring ? 'Declaring...' : '🚨 Declare & Open War-Room'}
+                  <AlertOctagon className="w-4 h-4 mr-1.5" />
+                  {declaring ? 'Declaring...' : 'Declare & Open War-Room'}
                 </button>
               </div>
             </form>

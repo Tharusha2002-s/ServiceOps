@@ -2,7 +2,38 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Menu, X, Search, Bell, LogOut } from 'lucide-react';
+import {
+  Menu,
+  X,
+  Search,
+  Bell,
+  LogOut,
+  LayoutDashboard,
+  Headphones,
+  Inbox,
+  PlusCircle,
+  Flame,
+  Clock,
+  Shuffle,
+  BarChart3,
+  Users,
+  FolderKanban,
+  FileText,
+  SlidersHorizontal,
+  BookOpen,
+  Server,
+  Laptop,
+  KeyRound,
+  Package,
+  Wifi,
+  Building2,
+  ShieldCheck,
+  Paperclip,
+  CheckCircle2,
+  AlertTriangle,
+  AlertOctagon,
+  PauseCircle,
+} from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { RoleName, TicketStatus, TicketPriority } from '@/types/auth';
@@ -22,6 +53,25 @@ import {
   NotificationsView,
   NotificationItem,
 } from '@/components/notifications/notifications-view';
+
+function getCategoryIcon(code?: string, className = 'w-4 h-4') {
+  switch (code?.toUpperCase()) {
+    case 'HW':
+      return <Laptop className={className} />;
+    case 'ACC':
+      return <KeyRound className={className} />;
+    case 'SW':
+      return <Package className={className} />;
+    case 'NET':
+      return <Wifi className={className} />;
+    case 'WRK':
+      return <Building2 className={className} />;
+    case 'SEC':
+      return <ShieldCheck className={className} />;
+    default:
+      return <FolderKanban className={className} />;
+  }
+}
 
 export default function DashboardPage() {
   const { user, accessToken, logout } = useAuth();
@@ -462,11 +512,23 @@ export default function DashboardPage() {
   const getTicketSlaPill = (t: any) => {
     if (t?.status === 'RESOLVED' || t?.status === 'CLOSED') {
       const isMet = t?.slaSnapshot?.isResolutionMet ?? true;
-      return isMet ? <span className="pill ok">Met ✓</span> : <span className="pill breach">Breached</span>;
+      return isMet ? (
+        <span className="pill ok" style={{ display: 'inline-flex', alignItems: 'center' }}>
+          <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Met
+        </span>
+      ) : (
+        <span className="pill breach" style={{ display: 'inline-flex', alignItems: 'center' }}>
+          <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Breached
+        </span>
+      );
     }
     if (t?.status === 'PENDING_CUSTOMER' || t?.slaSnapshot?.status === 'PAUSED') {
       const pausedMins = t?.slaSnapshot?.totalPausedMinutes || 0;
-      return <span className="pill pause">⏸ Paused {pausedMins > 0 ? `(${pausedMins}m)` : ''}</span>;
+      return (
+        <span className="pill pause" style={{ display: 'inline-flex', alignItems: 'center' }}>
+          <PauseCircle className="w-3.5 h-3.5 mr-1" /> Paused {pausedMins > 0 ? `(${pausedMins}m)` : ''}
+        </span>
+      );
     }
     if (!t?.resolutionDueAt) return <span className="pill ok">On Track</span>;
     const now = new Date().getTime();
@@ -550,7 +612,8 @@ export default function DashboardPage() {
               aria-current={activeTab === 'home' && primaryRole !== RoleName.IT_SUPPORT_AGENT ? 'page' : undefined}
               onClick={() => handleNavClick('home')}
             >
-              Home
+              <LayoutDashboard className="nav-icon" />
+              <span>Home</span>
             </button>
             {(primaryRole === RoleName.IT_SUPPORT_AGENT ||
               primaryRole === RoleName.IT_MANAGER ||
@@ -560,7 +623,8 @@ export default function DashboardPage() {
                 aria-current={activeTab === 'desk' || (activeTab === 'home' && primaryRole === RoleName.IT_SUPPORT_AGENT) ? 'page' : undefined}
                 onClick={() => handleNavClick('desk')}
               >
-                Agent Desk ({tickets.filter((t) => t.assigneeId === user?.id || t.assignee?.id === user?.id).length})
+                <Headphones className="nav-icon" />
+                <span>Agent Desk ({tickets.filter((t) => t.assigneeId === user?.id || t.assignee?.id === user?.id).length})</span>
               </button>
             )}
             <button
@@ -568,14 +632,16 @@ export default function DashboardPage() {
               aria-current={activeTab === 'requests' ? 'page' : undefined}
               onClick={() => handleNavClick('requests')}
             >
-              {primaryRole === RoleName.EMPLOYEE ? `My Requests (${tickets.length})` : `All Tickets (${tickets.length})`}
+              <Inbox className="nav-icon" />
+              <span>{primaryRole === RoleName.EMPLOYEE ? `My Requests (${tickets.length})` : `All Tickets (${tickets.length})`}</span>
             </button>
             <button
               type="button"
               aria-current={activeTab === 'new' ? 'page' : undefined}
               onClick={() => handleNavClick('new')}
             >
-              + New Request
+              <PlusCircle className="nav-icon" />
+              <span>New Request</span>
             </button>
             {(primaryRole === RoleName.IT_MANAGER ||
               primaryRole === RoleName.SYSTEM_ADMINISTRATOR ||
@@ -585,7 +651,8 @@ export default function DashboardPage() {
                 aria-current={activeTab === 'incidents' ? 'page' : undefined}
                 onClick={() => openIncidentView()}
               >
-                Incidents {activeOutage ? '· 1 Active' : ''}
+                <Flame className="nav-icon" />
+                <span>Incidents {activeOutage ? '· 1 Active' : ''}</span>
               </button>
             )}
             {(primaryRole === RoleName.IT_MANAGER ||
@@ -599,7 +666,8 @@ export default function DashboardPage() {
                   fetchSlaData();
                 }}
               >
-                SLA Policies {breachedTickets.length > 0 && `(${breachedTickets.length})`}
+                <Clock className="nav-icon" />
+                <span>SLA Policies {breachedTickets.length > 0 && `(${breachedTickets.length})`}</span>
               </button>
             )}
             {(primaryRole === RoleName.IT_MANAGER ||
@@ -609,7 +677,8 @@ export default function DashboardPage() {
                 aria-current={activeTab === 'assignment' ? 'page' : undefined}
                 onClick={() => handleNavClick('assignment')}
               >
-                Assignment Desk ({tickets.filter((t) => !t.assigneeId && !t.assignee && t.status !== 'CLOSED' && t.status !== 'RESOLVED').length})
+                <Shuffle className="nav-icon" />
+                <span>Assignment Desk ({tickets.filter((t) => !t.assigneeId && !t.assignee && t.status !== 'CLOSED' && t.status !== 'RESOLVED').length})</span>
               </button>
             )}
             {(primaryRole === RoleName.IT_MANAGER ||
@@ -619,7 +688,8 @@ export default function DashboardPage() {
                 aria-current={activeTab === 'reports' ? 'page' : undefined}
                 onClick={() => handleNavClick('reports')}
               >
-                Reports &amp; Analytics
+                <BarChart3 className="nav-icon" />
+                <span>Reports &amp; Analytics</span>
               </button>
             )}
             {(primaryRole === RoleName.IT_MANAGER ||
@@ -629,7 +699,8 @@ export default function DashboardPage() {
                 aria-current={activeTab === 'users' ? 'page' : undefined}
                 onClick={() => handleNavClick('users')}
               >
-                {primaryRole === RoleName.SYSTEM_ADMINISTRATOR ? 'People & Roles' : 'Enterprise Directory'}
+                <Users className="nav-icon" />
+                <span>{primaryRole === RoleName.SYSTEM_ADMINISTRATOR ? 'People & Roles' : 'Enterprise Directory'}</span>
               </button>
             )}
             {primaryRole === RoleName.SYSTEM_ADMINISTRATOR && (
@@ -638,7 +709,8 @@ export default function DashboardPage() {
                 aria-current={activeTab === 'categories' ? 'page' : undefined}
                 onClick={() => handleNavClick('categories')}
               >
-                Categories
+                <FolderKanban className="nav-icon" />
+                <span>Categories</span>
               </button>
             )}
             {(primaryRole === RoleName.IT_MANAGER ||
@@ -648,7 +720,8 @@ export default function DashboardPage() {
                 aria-current={activeTab === 'audit' ? 'page' : undefined}
                 onClick={() => handleNavClick('audit')}
               >
-                Audit Trail
+                <FileText className="nav-icon" />
+                <span>Audit Trail</span>
               </button>
             )}
             {primaryRole === RoleName.SYSTEM_ADMINISTRATOR && (
@@ -657,7 +730,8 @@ export default function DashboardPage() {
                 aria-current={activeTab === 'settings' ? 'page' : undefined}
                 onClick={() => handleNavClick('settings')}
               >
-                Settings
+                <SlidersHorizontal className="nav-icon" />
+                <span>Settings</span>
               </button>
             )}
             <button
@@ -665,7 +739,8 @@ export default function DashboardPage() {
               aria-current={activeTab === 'knowledge' ? 'page' : undefined}
               onClick={() => handleNavClick('knowledge')}
             >
-              Knowledge Base
+              <BookOpen className="nav-icon" />
+              <span>Knowledge Base</span>
             </button>
             {(primaryRole === RoleName.IT_SUPPORT_AGENT ||
               primaryRole === RoleName.IT_MANAGER ||
@@ -675,7 +750,8 @@ export default function DashboardPage() {
                 aria-current={activeTab === 'assets' ? 'page' : undefined}
                 onClick={() => handleNavClick('assets')}
               >
-                IT Assets CMDB
+                <Server className="nav-icon" />
+                <span>IT Assets CMDB</span>
               </button>
             )}
           </nav>
@@ -857,7 +933,9 @@ export default function DashboardPage() {
                 {activeOutage && (
                   <div className="outage-banner">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div className="outage-icon">⚠️</div>
+                      <div className="outage-icon">
+                        <AlertTriangle className="w-5 h-5 text-amber-700" />
+                      </div>
                       <div>
                         <strong style={{ color: 'var(--amber)', fontSize: 14 }}>
                           Active Service Notice: {activeOutage.title} ({activeOutage.incidentNumber})
@@ -888,7 +966,9 @@ export default function DashboardPage() {
                 {resolvedTicketToConfirm && (
                   <div className="action-card" id="home-action-card">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <div className="badge-icon">✓</div>
+                      <div className="badge-icon">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-700" />
+                      </div>
                       <div>
                         <div
                           style={{
@@ -963,7 +1043,7 @@ export default function DashboardPage() {
                       padding: '8px 14px',
                     }}
                   >
-                    <span style={{ fontSize: 16, color: 'var(--muted)' }}>🔍</span>
+                    <Search className="w-4 h-4 text-muted flex-shrink-0" />
                     <input
                       id="portal-search-input"
                       value={reqSearch}
@@ -983,17 +1063,37 @@ export default function DashboardPage() {
                     <span className="hint" style={{ margin: 0, fontWeight: 500 }}>
                       Popular requests:
                     </span>
-                    <button className="quick-tag" type="button" onClick={() => { setFormCategory('HW'); setActiveTab('new'); }}>
-                      💻 Laptop dock
+                    <button
+                      className="quick-tag"
+                      type="button"
+                      onClick={() => { setFormCategory('HW'); setActiveTab('new'); }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <Laptop className="w-3.5 h-3.5 text-copper" /> Laptop dock
                     </button>
-                    <button className="quick-tag" type="button" onClick={() => { setFormCategory('ACC'); setActiveTab('new'); }}>
-                      🔑 Password reset
+                    <button
+                      className="quick-tag"
+                      type="button"
+                      onClick={() => { setFormCategory('ACC'); setActiveTab('new'); }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <KeyRound className="w-3.5 h-3.5 text-copper" /> Password reset
                     </button>
-                    <button className="quick-tag" type="button" onClick={() => { setFormCategory('SW'); setActiveTab('new'); }}>
-                      📦 Figma license
+                    <button
+                      className="quick-tag"
+                      type="button"
+                      onClick={() => { setFormCategory('SW'); setActiveTab('new'); }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <Package className="w-3.5 h-3.5 text-copper" /> Figma license
                     </button>
-                    <button className="quick-tag" type="button" onClick={() => { setFormCategory('NET'); setActiveTab('new'); }}>
-                      🌐 Office Wi-Fi
+                    <button
+                      className="quick-tag"
+                      type="button"
+                      onClick={() => { setFormCategory('NET'); setActiveTab('new'); }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <Wifi className="w-3.5 h-3.5 text-copper" /> Office Wi-Fi
                     </button>
                   </div>
                 </div>
@@ -1124,7 +1224,7 @@ export default function DashboardPage() {
                               setActiveTab('new');
                             }}
                           >
-                            <span className="svc-icon">{c.icon || '📁'}</span>
+                            <span className="svc-icon">{getCategoryIcon(c.code, 'w-5 h-5 text-copper')}</span>
                             <strong>{c.name}</strong>
                             <span>{c.description || 'Service line'}</span>
                           </button>
@@ -1143,9 +1243,10 @@ export default function DashboardPage() {
                               setActiveTab('sla');
                               fetchSlaData();
                             }}
-                            style={{ justifyContent: 'flex-start', textAlign: 'left', width: '100%', fontSize: 13 }}
+                            style={{ justifyContent: 'flex-start', textAlign: 'left', width: '100%', fontSize: 13, display: 'flex', alignItems: 'center' }}
                           >
-                            ⚙️ Review SLA policies & targets {breachedTickets.length > 0 && `(${breachedTickets.length} breached)`}
+                            <SlidersHorizontal className="w-4 h-4 mr-2 text-copper" />
+                            Review SLA policies &amp; targets {breachedTickets.length > 0 && `(${breachedTickets.length} breached)`}
                           </button>
                         </div>
                       </div>
@@ -1280,7 +1381,7 @@ export default function DashboardPage() {
                 <div className="card" style={{ padding: '8px 8px 0' }}>
                   {filteredRequests.length === 0 ? (
                     <div className="empty-state">
-                      <div style={{ fontSize: 32 }}>🔍</div>
+                      <Search className="w-8 h-8 text-muted mx-auto mb-2 opacity-50" />
                       <h4>No matching requests found</h4>
                       <p className="hint">Try adjusting your search terms, status filters, or category.</p>
                       <button
@@ -1406,7 +1507,9 @@ export default function DashboardPage() {
                               style={{ justifyContent: 'space-between', fontSize: 12, padding: '6px 10px' }}
                               onClick={() => setActiveTab('knowledge')}
                             >
-                              <span>📘 {art.title}</span>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                <BookOpen className="w-3.5 h-3.5 text-copper" /> {art.title}
+                              </span>
                               <span className="hint">{art.readMinutes}m read →</span>
                             </button>
                           ))}
@@ -1503,7 +1606,7 @@ export default function DashboardPage() {
                           style={{ display: 'none' }}
                           onChange={(e) => handleFileSelection(e.target.files)}
                         />
-                        <span style={{ fontSize: 22, display: 'block', marginBottom: 4 }}>📎</span>
+                        <Paperclip className="w-6 h-6 text-muted mx-auto mb-1 opacity-70" />
                         <strong>Select a photo, PDF, screenshot, or log file</strong>
                         <div className="hint" style={{ marginTop: 4 }}>
                           PNG, JPG, PDF, TXT, LOG up to 10 MB per file (Max 3 files)
@@ -1514,7 +1617,7 @@ export default function DashboardPage() {
                           {pendingFiles.map((file, idx) => (
                             <div key={`${file.name}-${idx}`} className="upload-item">
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span>📄</span>
+                                <FileText className="w-4 h-4 text-muted" />
                                 <strong>{file.name}</strong>
                                 <span className="hint">{Math.max(1, Math.round(file.size / 1024))} KB</span>
                               </div>
@@ -1625,7 +1728,9 @@ export default function DashboardPage() {
                                 key={s.key}
                                 className={`step-item ${isDone ? 'done' : ''} ${isActive ? 'active' : ''}`}
                               >
-                                <div className="step-circle">{isDone ? '✓' : idx + 1}</div>
+                                <div className="step-circle">
+                                  {isDone ? <CheckCircle2 className="w-3.5 h-3.5" /> : idx + 1}
+                                </div>
                                 <div className="step-title">{s.label}</div>
                               </div>
                             );
@@ -1749,7 +1854,10 @@ export default function DashboardPage() {
                                         style={{ display: 'none' }}
                                         onChange={(e) => handleUploadTicketFiles(e.target.files)}
                                       />
-                                      {uploadingFiles ? 'Uploading...' : '📎 Attach file'}
+                                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                        <Paperclip className="w-3.5 h-3.5" />
+                                        {uploadingFiles ? 'Uploading...' : 'Attach file'}
+                                      </span>
                                     </label>
                                     {/* Internal Note Toggle: strictly hidden from pure employees */}
                                     {primaryRole !== RoleName.EMPLOYEE && (
@@ -1801,7 +1909,19 @@ export default function DashboardPage() {
                           <div className="meta-list">
                             <div>
                               <dt>Response</dt>
-                              <dd>{selectedTicket.firstResponseAt ? 'Met ✓' : (selectedTicket.responseDueAt && new Date() > new Date(selectedTicket.responseDueAt) ? 'Breached' : 'Pending')}</dd>
+                              <dd>
+                                {selectedTicket.firstResponseAt ? (
+                                  <span className="pill ok" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                    <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Met
+                                  </span>
+                                ) : selectedTicket.responseDueAt && new Date() > new Date(selectedTicket.responseDueAt) ? (
+                                  <span className="pill breach" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                    <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Breached
+                                  </span>
+                                ) : (
+                                  'Pending'
+                                )}
+                              </dd>
                             </div>
                             <div>
                               <dt>Resolve by</dt>
@@ -1947,8 +2067,9 @@ export default function DashboardPage() {
                                   }}
                                 >
                                   <div className="row-between">
-                                    <span style={{ fontWeight: 550, fontSize: 12, wordBreak: 'break-all' }}>
-                                      📎 {att.fileName}
+                                    <span style={{ fontWeight: 550, fontSize: 12, wordBreak: 'break-all', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                      <Paperclip className="w-3.5 h-3.5 text-copper flex-shrink-0" />
+                                      {att.fileName}
                                     </span>
                                     <span className="hint" style={{ margin: 0, whiteSpace: 'nowrap' }}>
                                       {Math.max(1, Math.round(att.fileSize / 1024))} KB
@@ -2104,8 +2225,9 @@ export default function DashboardPage() {
                   type="button"
                   style={{ padding: '4px 10px' }}
                   onClick={() => setShowOutageModal(false)}
+                  aria-label="Close outage modal"
                 >
-                  ✕
+                  <X className="w-4 h-4" />
                 </button>
               </div>
               <p style={{ fontSize: 14, color: 'var(--ink-soft)' }}>{activeOutage.description}</p>

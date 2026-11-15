@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { ShieldAlert, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { RoleName } from '@/types/auth';
 
@@ -64,7 +65,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         }}
       >
         <div className="card" style={{ maxWidth: 460, textAlign: 'center', padding: 32 }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>🛡️</div>
+          <ShieldAlert className="w-10 h-10 text-rose-600 mx-auto mb-3" />
           <h2 style={{ fontFamily: 'var(--serif)', fontSize: 24, marginBottom: 8, color: 'var(--ink)' }}>
             Access Restricted
           </h2>
@@ -97,7 +98,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         }}
       >
         <div className="card" style={{ maxWidth: 460, textAlign: 'center', padding: 32 }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+          <AlertTriangle className="w-10 h-10 text-amber-600 mx-auto mb-3" />
           <h2 style={{ fontFamily: 'var(--serif)', fontSize: 24, marginBottom: 8, color: 'var(--ink)' }}>
             Missing Permission
           </h2>

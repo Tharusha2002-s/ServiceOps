@@ -5,6 +5,11 @@ import { AuthProvider } from '@/context/auth-context';
 export const metadata: Metadata = {
   title: 'ServiceOps — Enterprise ITSM Platform',
   description: 'Production-ready IT Service Management & Operations Platform',
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({

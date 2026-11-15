@@ -1,7 +1,36 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import {
+  FolderKanban,
+  Laptop,
+  KeyRound,
+  Package,
+  Wifi,
+  Building2,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
 import { api } from '@/lib/api';
+
+const renderCatIcon = (code?: string) => {
+  switch (code?.toUpperCase()) {
+    case 'HW':
+      return <Laptop className="w-4 h-4 text-amber-600 inline mr-1.5" />;
+    case 'ACC':
+      return <KeyRound className="w-4 h-4 text-amber-600 inline mr-1.5" />;
+    case 'SW':
+      return <Package className="w-4 h-4 text-amber-600 inline mr-1.5" />;
+    case 'NET':
+      return <Wifi className="w-4 h-4 text-amber-600 inline mr-1.5" />;
+    case 'WRK':
+      return <Building2 className="w-4 h-4 text-amber-600 inline mr-1.5" />;
+    case 'SEC':
+      return <ShieldCheck className="w-4 h-4 text-amber-600 inline mr-1.5" />;
+    default:
+      return <FolderKanban className="w-4 h-4 text-amber-600 inline mr-1.5" />;
+  }
+};
 
 interface CategoriesViewProps {
   onCategoriesUpdated?: () => Promise<void> | void;
@@ -22,7 +51,7 @@ export function CategoriesView({ onCategoriesUpdated }: CategoriesViewProps) {
 
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
-  const [icon, setIcon] = useState('📁');
+  const [icon, setIcon] = useState('');
   const [description, setDescription] = useState('');
   const [defaultPriority, setDefaultPriority] = useState('MEDIUM_P3');
   const [subcatText, setSubcatText] = useState('');
@@ -48,7 +77,7 @@ export function CategoriesView({ onCategoriesUpdated }: CategoriesViewProps) {
     setEditingCat(null);
     setName('');
     setCode('');
-    setIcon('📁');
+    setIcon('');
     setDescription('');
     setDefaultPriority('MEDIUM_P3');
     setSubcatText('');
@@ -59,7 +88,7 @@ export function CategoriesView({ onCategoriesUpdated }: CategoriesViewProps) {
     setEditingCat(c);
     setName(c.name);
     setCode(c.code);
-    setIcon(c.icon || '📁');
+    setIcon(c.icon || '');
     setDescription(c.description || '');
     setDefaultPriority(c.defaultPriority || 'MEDIUM_P3');
     setSubcatText((c.subcategories || []).join(', '));
@@ -135,9 +164,9 @@ export function CategoriesView({ onCategoriesUpdated }: CategoriesViewProps) {
           {cats.map((c) => (
             <article key={c.id} className="card" style={{ opacity: c.isActive ? 1 : 0.72 }}>
               <div className="row-between">
-                <h3 style={{ margin: 0 }}>
-                  {c.icon || '📁'} {c.name}{' '}
-                  <span className="mono hint" style={{ fontSize: 11 }}>({c.code})</span>
+                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
+                  {renderCatIcon(c.code)} {c.name}{' '}
+                  <span className="mono hint" style={{ fontSize: 11, marginLeft: 6 }}>({c.code})</span>
                 </h3>
                 <span className={`pill ${c.isActive ? 'ok' : 'closed'}`}>
                   {c.isActive ? 'Active' : 'Retired'}
@@ -196,7 +225,7 @@ export function CategoriesView({ onCategoriesUpdated }: CategoriesViewProps) {
                 {editingCat ? `Edit Category (${editingCat.code})` : 'Create Service Category'}
               </h3>
               <button className="btn btn-ghost" type="button" onClick={() => setModalOpen(false)}>
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
             <form onSubmit={handleSave} className="stack">

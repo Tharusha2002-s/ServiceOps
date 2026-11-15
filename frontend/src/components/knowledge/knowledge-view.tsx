@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { ThumbsUp, X, Search, BookOpen } from 'lucide-react';
 import { api } from '@/lib/api';
 import { RoleName } from '@/types/auth';
 
@@ -216,7 +217,7 @@ export function KnowledgeView({ user, categories, onStartTicket }: KnowledgeView
                 <h2 style={{ margin: '4px 0 0', fontSize: 22 }}>{activeArticle.title}</h2>
               </div>
               <button className="btn btn-ghost" type="button" onClick={() => setActiveArticle(null)}>
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
             {activeArticle.summary && (
@@ -241,8 +242,9 @@ export function KnowledgeView({ user, categories, onStartTicket }: KnowledgeView
                   className="btn btn-ghost"
                   type="button"
                   onClick={() => handleHelpful(activeArticle.id)}
+                  style={{ display: 'inline-flex', alignItems: 'center' }}
                 >
-                  👍 Helpful ({activeArticle.helpfulCount || 0})
+                  <ThumbsUp className="w-3.5 h-3.5 mr-1.5 text-copper" /> Helpful ({activeArticle.helpfulCount || 0})
                 </button>
                 {isStaff && activeArticle.status !== 'PUBLISHED' && (
                   <button
@@ -287,7 +289,7 @@ export function KnowledgeView({ user, categories, onStartTicket }: KnowledgeView
             <div className="row-between" style={{ marginBottom: 14 }}>
               <h3 style={{ margin: 0 }}>Author Knowledge Article</h3>
               <button className="btn btn-ghost" type="button" onClick={() => setShowAuthorModal(false)}>
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
             <form onSubmit={handleCreateArticle} className="stack">

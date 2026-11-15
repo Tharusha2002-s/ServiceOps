@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import { api } from '@/lib/api';
@@ -13,9 +14,9 @@ export default function LoginPage() {
 
   const [mode, setMode] = useState<AuthMode>('login');
 
-  // Login states
-  const [email, setEmail] = useState('employee@serviceops.local');
-  const [password, setPassword] = useState('Password@123');
+  // Login states - initialize empty for production
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -140,24 +141,18 @@ export default function LoginPage() {
     }
   };
 
-  const setQuickCredentials = (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword('Password@123');
-    clearFeedback();
-  };
-
   return (
     <section id={mode === 'reset' ? 'reset' : 'login'} className="screen is-on" data-screen={mode}>
       <div className="auth">
         {/* Left Side: Brand Story & Philosophy */}
         <div className="auth-story">
           <div>
-            <div className="brand-row">
+            <Link href="/" className="brand-row hover:opacity-85" style={{ textDecoration: 'none' }}>
               <span className="mark">
                 <i></i>
               </span>{' '}
               ServiceOps
-            </div>
+            </Link>
 
             {mode === 'reset' ? (
               <>
@@ -314,54 +309,6 @@ export default function LoginPage() {
               >
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
-
-              {/* System Administrator Initial Login Notice */}
-              <div
-                style={{
-                  marginTop: 24,
-                  paddingTop: 16,
-                  borderTop: '1px solid var(--line)',
-                }}
-              >
-                <div
-                  style={{
-                    background: 'var(--card-2)',
-                    border: '1px solid var(--line)',
-                    borderRadius: 10,
-                    padding: 12,
-                  }}
-                >
-                  <div className="row-between">
-                    <div>
-                      <span
-                        style={{
-                          display: 'block',
-                          fontFamily: 'var(--mono)',
-                          fontSize: 11,
-                          letterSpacing: '0.06em',
-                          textTransform: 'uppercase',
-                          color: 'var(--copper)',
-                          fontWeight: 600,
-                        }}
-                      >
-                        System Administrator
-                      </span>
-                      <strong style={{ fontSize: 13, display: 'block', marginTop: 2 }}>admin@serviceops.local</strong>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setQuickCredentials('admin@serviceops.local')}
-                      className="btn btn-ghost"
-                      style={{ fontSize: 12, padding: '4px 10px' }}
-                    >
-                      Fill Admin
-                    </button>
-                  </div>
-                  <p className="hint" style={{ marginTop: 8, fontSize: 11 }}>
-                    Production environment: Only System Administrator is initialized. Employees self-register via &ldquo;Create employee account&rdquo; below, and IT Support roles are assigned in People &amp; Roles.
-                  </p>
-                </div>
-              </div>
             </form>
           )}
 

@@ -4,6 +4,7 @@ import * as request from 'supertest';
 import * as cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/database/prisma.service';
 
 describe('ServiceOps Enterprise ITSM API (Supertest E2E + OWASP Security)', () => {
   let app: INestApplication;
@@ -31,20 +32,23 @@ describe('ServiceOps Enterprise ITSM API (Supertest E2E + OWASP Security)', () =
 
     await app.init();
 
+    const testEmpEmail = `test.employee.${Date.now()}@serviceops.local`;
+
     // Register test employee account
     await request(app.getHttpServer())
       .post('/api/v1/auth/register')
       .send({
-        email: 'employee@serviceops.local',
+        email: testEmpEmail,
         password: 'Password@123',
-        firstName: 'Amina',
-        lastName: 'Perera',
-        department: 'Finance',
-      });
+        firstName: 'Test',
+        lastName: 'Employee',
+        department: 'Operations',
+      })
+      .expect(201);
 
     const empLogin = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
-      .send({ email: 'employee@serviceops.local', password: 'Password@123' })
+      .send({ email: testEmpEmail, password: 'Password@123' })
       .expect(200);
     empToken = empLogin.body.data.accessToken;
 
@@ -56,6 +60,10 @@ describe('ServiceOps Enterprise ITSM API (Supertest E2E + OWASP Security)', () =
   });
 
   afterAll(async () => {
+    try {
+      const prisma = app.get(PrismaService);
+      await prisma.user.deleteMany({ where: { email: { not: 'admin@serviceops.local' } } });
+    } catch {}
     await app.close();
   });
 
