@@ -24,6 +24,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Silent token refresh check on application mount
   const checkInitialAuth = useCallback(async () => {
+    // Only attempt refresh if there was a prior active session,
+    // or if navigating directly to a non-public route
+    const hasPriorSession =
+      typeof window !== 'undefined' &&
+      localStorage.getItem('serviceops_has_session') === 'true';
+
+    const isPublicLanding =
+      typeof window !== 'undefined' && window.location.pathname === '/';
+
+    if (!hasPriorSession && isPublicLanding) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await api.post('/auth/refresh', {});
       if (response.data?.data) {
@@ -31,12 +45,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAccessToken(accessToken);
         setAccessTokenState(accessToken);
         setUser(profile);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('serviceops_has_session', 'true');
+        }
       }
     } catch {
       // No active refresh session exists, user remains logged out
       setAccessToken(null);
       setAccessTokenState(null);
       setUser(null);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('serviceops_has_session');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -58,6 +78,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAccessToken(accessToken);
       setAccessTokenState(accessToken);
       setUser(profile);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('serviceops_has_session', 'true');
+      }
       return profile;
     } finally {
       setIsLoading(false);
@@ -74,6 +97,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAccessToken(null);
       setAccessTokenState(null);
       setUser(null);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('serviceops_has_session');
+      }
       setIsLoading(false);
       window.location.href = '/login';
     }
