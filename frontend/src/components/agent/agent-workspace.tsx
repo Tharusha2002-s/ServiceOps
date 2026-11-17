@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { CheckCircle2, AlertTriangle, Zap, Kanban, Table } from 'lucide-react';
 import { api } from '@/lib/api';
 
 interface AgentWorkspaceProps {
@@ -104,7 +105,11 @@ export function AgentWorkspace({
 
   const getSlaPill = (t: any) => {
     if (t.status === 'RESOLVED' || t.status === 'CLOSED') {
-      return <span className="pill ok">Met ✓</span>;
+      return (
+        <span className="pill ok" style={{ display: 'inline-flex', alignItems: 'center' }}>
+          <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-emerald-600" /> Met
+        </span>
+      );
     }
     if (t.status === 'PENDING_CUSTOMER') {
       return <span className="pill pause">Paused</span>;
@@ -115,7 +120,12 @@ export function AgentWorkspace({
     const due = new Date(t.resolutionDueAt).getTime();
     if (now > due) {
       const diffMins = Math.floor((now - due) / 60000);
-      return <span className="pill breach">Breached {diffMins > 60 ? `${Math.floor(diffMins / 60)}h ${diffMins % 60}m` : `${diffMins}m`}</span>;
+      return (
+        <span className="pill breach" style={{ display: 'inline-flex', alignItems: 'center' }}>
+          <AlertTriangle className="w-3.5 h-3.5 mr-1 text-rose-600" />
+          Breached {diffMins > 60 ? `${Math.floor(diffMins / 60)}h ${diffMins % 60}m` : `${diffMins}m`}
+        </span>
+      );
     }
     const leftMins = Math.floor((due - now) / 60000);
     if (leftMins <= 120) {
@@ -139,7 +149,9 @@ export function AgentWorkspace({
       {activeOutage && (
         <div className="outage-banner">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div className="outage-icon">⚠️</div>
+            <div className="outage-icon">
+              <AlertTriangle className="w-5 h-5 text-amber-700" />
+            </div>
             <div>
               <strong style={{ color: 'var(--amber)', fontSize: 14 }}>
                 Major Incident Active: {activeOutage.incidentNumber} — {activeOutage.title}
@@ -177,7 +189,20 @@ export function AgentWorkspace({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span style={{ fontSize: 22 }}>⚡</span>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 9,
+                background: '#faeae3',
+                border: '1px solid rgba(142, 63, 30, 0.25)',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Zap className="w-5 h-5 text-copper" />
+            </div>
             <div>
               <div
                 style={{
@@ -237,16 +262,18 @@ export function AgentWorkspace({
               type="button"
               className={`btn ${viewMode === 'lanes' ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => setViewMode('lanes')}
-              style={{ fontSize: 12, padding: '4px 12px', border: 'none' }}
+              style={{ fontSize: 12, padding: '5px 12px', border: 'none', display: 'inline-flex', alignItems: 'center' }}
             >
+              <Kanban className="w-3.5 h-3.5 mr-1.5" />
               Lanes
             </button>
             <button
               type="button"
               className={`btn ${viewMode === 'table' ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => setViewMode('table')}
-              style={{ fontSize: 12, padding: '4px 12px', border: 'none' }}
+              style={{ fontSize: 12, padding: '5px 12px', border: 'none', display: 'inline-flex', alignItems: 'center' }}
             >
+              <Table className="w-3.5 h-3.5 mr-1.5" />
               Queue list
             </button>
           </div>
@@ -289,8 +316,9 @@ export function AgentWorkspace({
             </h3>
             <div className="stack" style={{ marginTop: 10 }}>
               {breachedTickets.length === 0 ? (
-                <div className="hint" style={{ textAlign: 'center', padding: '24px 8px' }}>
-                  No breached tickets on your desk ✓
+                <div className="hint" style={{ textAlign: 'center', padding: '24px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  No breached tickets on your desk
                 </div>
               ) : (
                 breachedTickets.map((t) => (

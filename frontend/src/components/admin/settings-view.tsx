@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { Save, SlidersHorizontal, ShieldCheck, Mail, Database, DatabaseBackup } from 'lucide-react';
 import { api } from '@/lib/api';
 
 export function SettingsView() {
@@ -82,8 +83,8 @@ export function SettingsView() {
             Global configuration for ServiceOps IT. Timezone, authentication boundaries, email delivery, and backups.
           </p>
         </div>
-        <button className="btn btn-primary" type="button" disabled={saving} onClick={handleSave}>
-          {saving ? 'Saving...' : 'Save all settings'}
+        <button className="btn btn-primary" type="button" disabled={saving} onClick={handleSave} style={{ display: 'inline-flex', alignItems: 'center' }}>
+          <Save className="w-4 h-4 mr-1.5" /> {saving ? 'Saving...' : 'Save all settings'}
         </button>
       </div>
 
@@ -100,20 +101,25 @@ export function SettingsView() {
 
       <div className="setting-tabs">
         {[
-          { key: 'general', label: 'General & Timezone' },
-          { key: 'security', label: 'Security & Auth (RBAC)' },
-          { key: 'email', label: 'Email & Outbound SMTP' },
-          { key: 'backups', label: 'Backups & Recovery' },
-        ].map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            className={`setting-tab ${panel === t.key ? 'active' : ''}`}
-            onClick={() => setPanel(t.key as any)}
-          >
-            {t.label}
-          </button>
-        ))}
+          { key: 'general', label: 'General & Timezone', icon: SlidersHorizontal },
+          { key: 'security', label: 'Security & Auth (RBAC)', icon: ShieldCheck },
+          { key: 'email', label: 'Email & Outbound SMTP', icon: Mail },
+          { key: 'backups', label: 'Backups & Recovery', icon: Database },
+        ].map((t) => {
+          const IconComp = t.icon;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              className={`setting-tab ${panel === t.key ? 'active' : ''}`}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              onClick={() => setPanel(t.key as any)}
+            >
+              <IconComp className="w-3.5 h-3.5" />
+              {t.label}
+            </button>
+          );
+        })}
       </div>
 
       <div className="split">
@@ -236,8 +242,9 @@ export function SettingsView() {
                 type="button"
                 disabled={saving}
                 onClick={handleManualBackup}
+                style={{ display: 'inline-flex', alignItems: 'center' }}
               >
-                {saving ? 'Verifying...' : 'Trigger manual backup snapshot'}
+                <DatabaseBackup className="w-4 h-4 mr-1.5" /> {saving ? 'Verifying...' : 'Trigger manual backup snapshot'}
               </button>
             </div>
           )}

@@ -6,8 +6,11 @@ export const metadata: Metadata = {
   title: 'ServiceOps — Enterprise ITSM Platform',
   description: 'Production-ready IT Service Management & Operations Platform',
   icons: {
-    icon: '/icon.svg',
-    shortcut: '/icon.svg',
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '32x32' },
+    ],
+    shortcut: '/favicon.ico',
     apple: '/icon.svg',
   },
 };

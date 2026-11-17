@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Zap, CheckCircle2, Clock, X, AlertTriangle, ArrowRight } from 'lucide-react';
 import { api } from '@/lib/api';
 
 interface DispatchDeskProps {
@@ -104,7 +105,7 @@ export function DispatchDesk({
         assignedCount++;
       }
 
-      setFeedback(`⚡ Successfully auto-balanced ${assignedCount} ticket(s) across support desk agents!`);
+      setFeedback(`Successfully auto-balanced ${assignedCount} ticket(s) across support desk agents!`);
       await onRefresh();
     } catch (err: any) {
       setFeedback(err?.response?.data?.message || 'Error during auto-balance');
@@ -152,9 +153,10 @@ export function DispatchDesk({
             type="button"
             disabled={autoBalancing || unassignedTickets.length === 0}
             onClick={handleAutoBalance}
-            style={{ fontSize: 13, padding: '7px 16px' }}
+            style={{ fontSize: 13, padding: '7px 16px', display: 'inline-flex', alignItems: 'center' }}
           >
-            {autoBalancing ? 'Balancing workloads...' : '⚡ Auto-balance workload'}
+            <Zap className="w-4 h-4 mr-1.5" />
+            {autoBalancing ? 'Balancing workloads...' : 'Auto-balance workload'}
           </button>
         </div>
       </div>
@@ -168,9 +170,13 @@ export function DispatchDesk({
             borderColor: '#bcdcc4',
             color: 'var(--moss)',
             fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
           }}
         >
-          ✓ {feedback}
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+          <span>{feedback}</span>
         </div>
       )}
 
@@ -189,8 +195,9 @@ export function DispatchDesk({
           </div>
 
           {unassignedTickets.length === 0 ? (
-            <div className="hint" style={{ textAlign: 'center', padding: '40px 10px' }}>
-              All tickets are currently assigned to owners ✓
+            <div className="hint" style={{ textAlign: 'center', padding: '40px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              All tickets are currently assigned to owners
             </div>
           ) : (
             <table>
@@ -275,7 +282,7 @@ export function DispatchDesk({
                   onClick={() => setSelectedTicket(null)}
                   style={{ padding: '2px 8px' }}
                 >
-                  ✕
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
@@ -409,7 +416,8 @@ export function DispatchDesk({
                           color: 'var(--copper)',
                         }}
                       >
-                        Assign {selectedTicket.ticketNumber} to {agent.firstName} &rarr;
+                        Assign {selectedTicket.ticketNumber} to {agent.firstName}
+                        <ArrowRight className="w-3 h-3 ml-1 inline" />
                       </button>
                     )}
                   </div>

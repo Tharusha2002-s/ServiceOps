@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { ShieldCheck, Download, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { RoleName } from '@/types/auth';
 
@@ -91,11 +92,11 @@ export function AuditView({ currentUser }: AuditViewProps) {
         </div>
         {isAdmin && (
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-ghost" type="button" onClick={handleVerifyChain}>
-              Verify hash chain
+            <button className="btn btn-ghost" type="button" onClick={handleVerifyChain} style={{ display: 'inline-flex', alignItems: 'center' }}>
+              <ShieldCheck className="w-4 h-4 mr-1.5" /> Verify hash chain
             </button>
-            <button className="btn btn-ghost" type="button" onClick={handleExportCsv}>
-              Export audit log
+            <button className="btn btn-ghost" type="button" onClick={handleExportCsv} style={{ display: 'inline-flex', alignItems: 'center' }}>
+              <Download className="w-4 h-4 mr-1.5" /> Export audit log
             </button>
           </div>
         )}
@@ -198,8 +199,8 @@ export function AuditView({ currentUser }: AuditViewProps) {
                   {selectedLog.resourceType} {selectedLog.resourceId ? `· ${selectedLog.resourceId}` : ''}
                 </h3>
               </div>
-              <button className="btn btn-ghost" type="button" onClick={() => setSelectedLog(null)}>
-                ✕
+              <button className="btn btn-ghost" type="button" onClick={() => setSelectedLog(null)} aria-label="Close">
+                <X className="w-4 h-4" />
               </button>
             </div>
             <pre className="json-viewer">

@@ -9,6 +9,7 @@ import {
   Wifi,
   Building2,
   ShieldCheck,
+  Plus,
   X,
 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -152,8 +153,8 @@ export function CategoriesView({ onCategoriesUpdated }: CategoriesViewProps) {
             Configure category definitions and subcategory taxonomies. Retiring a category preserves existing ticket records.
           </p>
         </div>
-        <button className="btn btn-primary" type="button" onClick={openNewModal}>
-          + Add category
+        <button className="btn btn-primary" type="button" onClick={openNewModal} style={{ display: 'inline-flex', alignItems: 'center' }}>
+          <Plus className="w-4 h-4 mr-1.5" /> Add category
         </button>
       </div>
 

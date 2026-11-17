@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { UserPlus, X, Shield, Lock, Unlock, UserCheck, AlertTriangle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { RoleName } from '@/types/auth';
 
@@ -123,8 +124,9 @@ export function AdminPeopleView({
             type="button"
             id="btn-invite-person-people"
             onClick={() => setShowInvite(true)}
+            style={{ display: 'inline-flex', alignItems: 'center' }}
           >
-            + Invite person
+            <UserPlus className="w-4 h-4 mr-1.5" /> Invite person
           </button>
         )}
       </div>
@@ -257,8 +259,8 @@ export function AdminPeopleView({
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="row-between" style={{ marginBottom: 14 }}>
               <h3 style={{ margin: 0 }}>Provision Enterprise Account</h3>
-              <button className="btn btn-ghost" type="button" onClick={() => setShowInvite(false)}>
-                ✕
+              <button className="btn btn-ghost" type="button" onClick={() => setShowInvite(false)} aria-label="Close">
+                <X className="w-4 h-4" />
               </button>
             </div>
             <form onSubmit={handleInvite} className="stack">
@@ -332,8 +334,8 @@ export function AdminPeopleView({
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="row-between" style={{ marginBottom: 12 }}>
               <h3 style={{ margin: 0 }}>Edit Role Assignment</h3>
-              <button className="btn btn-ghost" type="button" onClick={() => setEditingUser(null)}>
-                ✕
+              <button className="btn btn-ghost" type="button" onClick={() => setEditingUser(null)} aria-label="Close">
+                <X className="w-4 h-4" />
               </button>
             </div>
             <p className="hint" style={{ marginBottom: 14 }}>

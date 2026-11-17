@@ -12,6 +12,9 @@ import {
   Headphones,
   Inbox,
   PlusCircle,
+  Plus,
+  ArrowLeft,
+  ArrowRight,
   Flame,
   Clock,
   Shuffle,
@@ -1026,7 +1029,7 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     <button className="btn btn-primary" type="button" onClick={() => setActiveTab('new')}>
-                      + New request
+                      <Plus className="w-4 h-4 mr-1.5 inline" /> New request
                     </button>
                   </div>
 
@@ -1134,7 +1137,7 @@ export default function DashboardPage() {
                           onClick={() => setActiveTab('requests')}
                           style={{ padding: 0, color: 'var(--copper)', fontSize: 13 }}
                         >
-                          View all ({tickets.length}) &rarr;
+                          View all ({tickets.length}) <ArrowRight className="w-3.5 h-3.5 ml-1 inline" />
                         </button>
                       </div>
 
@@ -1153,7 +1156,7 @@ export default function DashboardPage() {
                           {tickets.length === 0 ? (
                             <tr>
                               <td colSpan={6} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--muted)' }}>
-                                No active service requests. Click &ldquo;+ New request&rdquo; to submit a ticket.
+                                No active service requests. Click &ldquo;New request&rdquo; to submit a ticket.
                               </td>
                             </tr>
                           ) : (
@@ -1293,7 +1296,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   <button className="btn btn-primary" type="button" onClick={() => setActiveTab('new')}>
-                    + New request
+                    <Plus className="w-4 h-4 mr-1.5 inline" /> New request
                   </button>
                 </div>
 
@@ -1510,7 +1513,9 @@ export default function DashboardPage() {
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                                 <BookOpen className="w-3.5 h-3.5 text-copper" /> {art.title}
                               </span>
-                              <span className="hint">{art.readMinutes}m read →</span>
+                              <span className="hint" style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                                {art.readMinutes}m read <ArrowRight className="w-3 h-3 inline" />
+                              </span>
                             </button>
                           ))}
                         </div>
@@ -1628,7 +1633,7 @@ export default function DashboardPage() {
                                   setPendingFiles((prev) => prev.filter((_, i) => i !== idx))
                                 }
                               >
-                                &times;
+                                <X className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           ))}
@@ -1672,9 +1677,9 @@ export default function DashboardPage() {
                   className="btn btn-ghost"
                   type="button"
                   onClick={() => setActiveTab('requests')}
-                  style={{ marginBottom: 12, padding: '4px 10px', fontSize: 13 }}
+                  style={{ marginBottom: 12, padding: '4px 10px', fontSize: 13, display: 'inline-flex', alignItems: 'center' }}
                 >
-                  &larr; Back to requests
+                  <ArrowLeft className="w-4 h-4 mr-1 inline" /> Back to requests
                 </button>
 
                 {loading ? (
@@ -2046,7 +2051,13 @@ export default function DashboardPage() {
                                   style={{ display: 'none' }}
                                   onChange={(e) => handleUploadTicketFiles(e.target.files)}
                                 />
-                                {uploadingFiles ? '...' : '+ Add'}
+                                {uploadingFiles ? (
+                                  '...'
+                                ) : (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    <Plus className="w-3 h-3 inline" /> Add
+                                  </span>
+                                )}
                               </label>
                             )}
                           </div>

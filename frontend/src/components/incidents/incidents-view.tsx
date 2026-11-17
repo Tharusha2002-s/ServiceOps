@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle2, AlertOctagon, X, Flame, ShieldAlert } from 'lucide-react';
+import { CheckCircle2, AlertOctagon, X, Flame, ShieldAlert, ArrowLeft, Circle, Plus } from 'lucide-react';
 import { api } from '@/lib/api';
 import { RoleName } from '@/types/auth';
 
@@ -213,12 +213,13 @@ export function IncidentsView({
             <button
               className="btn btn-ghost"
               type="button"
+              style={{ display: 'inline-flex', alignItems: 'center' }}
               onClick={() => {
                 setSelectedIncident(null);
                 if (onClearInitialIncident) onClearInitialIncident();
               }}
             >
-              &larr; Back to incidents
+              <ArrowLeft className="w-4 h-4 mr-1 inline" /> Back to incidents
             </button>
           </div>
         </div>
@@ -233,8 +234,15 @@ export function IncidentsView({
               <div
                 key={st}
                 className={`inc-step ${isDone ? 'done' : ''} ${isActive ? 'active' : ''}`}
+                style={{ display: 'inline-flex', alignItems: 'center' }}
               >
-                {isDone ? <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" /> : isActive ? '● ' : '○ '}
+                {isDone ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 inline mr-1 text-emerald-600" />
+                ) : isActive ? (
+                  <span className="w-2 h-2 rounded-full bg-amber-500 inline-block mr-1.5 animate-pulse" />
+                ) : (
+                  <Circle className="w-3 h-3 inline mr-1 opacity-40" />
+                )}
                 {st.charAt(0) + st.slice(1).toLowerCase()}
               </div>
             );
@@ -307,9 +315,9 @@ export function IncidentsView({
                     className="btn btn-ghost"
                     type="submit"
                     disabled={linking}
-                    style={{ fontSize: 12, padding: '4px 10px' }}
+                    style={{ fontSize: 12, padding: '4px 10px', display: 'inline-flex', alignItems: 'center' }}
                   >
-                    + Link ticket
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Link ticket
                   </button>
                 </form>
               </div>
@@ -556,8 +564,9 @@ export function IncidentsView({
           className="btn btn-primary"
           type="button"
           onClick={() => setShowDeclareModal(true)}
+          style={{ display: 'inline-flex', alignItems: 'center' }}
         >
-          + Declare incident
+          <AlertOctagon className="w-4 h-4 mr-1.5" /> Declare incident
         </button>
       </div>
 

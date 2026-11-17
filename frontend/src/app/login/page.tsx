@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { api } from '@/lib/api';
 
@@ -403,13 +404,13 @@ export default function LoginPage() {
                 <button
                   type="button"
                   className="btn"
-                  style={{ padding: 0, color: 'var(--copper)', fontSize: 13 }}
+                  style={{ padding: 0, color: 'var(--copper)', fontSize: 13, display: 'inline-flex', alignItems: 'center' }}
                   onClick={() => {
                     clearFeedback();
                     setMode('login');
                   }}
                 >
-                  &larr; Back to sign in
+                  <ArrowLeft className="w-3.5 h-3.5 mr-1 inline" /> Back to sign in
                 </button>
               </p>
             </form>
@@ -473,13 +474,13 @@ export default function LoginPage() {
                     <button
                       type="button"
                       className="btn"
-                      style={{ padding: 0, fontSize: 13, color: 'var(--ink-soft)' }}
+                      style={{ padding: 0, fontSize: 13, color: 'var(--ink-soft)', display: 'inline-flex', alignItems: 'center' }}
                       onClick={() => {
                         clearFeedback();
                         setResetStep('confirm');
                       }}
                     >
-                      Already have a reset token? Enter it here &rarr;
+                      Already have a reset token? Enter it here <ArrowRight className="w-3.5 h-3.5 ml-1 inline" />
                     </button>
                   </p>
                 </form>
@@ -517,14 +518,14 @@ export default function LoginPage() {
                   type="button"
                   className="btn"
                   id="back-login"
-                  style={{ padding: 0, color: 'var(--copper)', fontSize: 13 }}
+                  style={{ padding: 0, color: 'var(--copper)', fontSize: 13, display: 'inline-flex', alignItems: 'center' }}
                   onClick={() => {
                     clearFeedback();
                     setResetStep('request');
                     setMode('login');
                   }}
                 >
-                  &larr; Back to sign in
+                  <ArrowLeft className="w-3.5 h-3.5 mr-1 inline" /> Back to sign in
                 </button>
               </p>
             </div>

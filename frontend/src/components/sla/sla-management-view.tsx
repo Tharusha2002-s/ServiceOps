@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { RefreshCw, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import { api } from '@/lib/api';
 
 interface SlaManagementViewProps {
@@ -83,9 +84,9 @@ export function SlaManagementView({
             className="btn btn-ghost"
             type="button"
             onClick={onRefresh}
-            style={{ fontSize: 13, padding: '6px 12px' }}
+            style={{ fontSize: 13, padding: '6px 12px', display: 'inline-flex', alignItems: 'center' }}
           >
-            ↻ Refresh Metrics
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh Metrics
           </button>
         </div>
       </div>
@@ -99,9 +100,13 @@ export function SlaManagementView({
             borderColor: '#bcdcc4',
             color: 'var(--moss)',
             fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
           }}
         >
-          ✓ {feedback}
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+          <span>{feedback}</span>
         </div>
       )}
 
@@ -156,9 +161,13 @@ export function SlaManagementView({
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.06em',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
                 }}
               >
-                ⚠️ Immediate Attention Required · Breach Escalation
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-600 flex-shrink-0" />
+                <span>Immediate Attention Required · Breach Escalation</span>
               </div>
               <h3 style={{ margin: '4px 0 0' }}>
                 {breachedTickets.length} ticket(s) currently past SLA deadline
@@ -311,8 +320,9 @@ export function SlaManagementView({
                 type="button"
                 onClick={() => setEditingPolicy(null)}
                 style={{ padding: '2px 8px' }}
+                aria-label="Close modal"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 

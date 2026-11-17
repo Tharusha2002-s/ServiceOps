@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { ThumbsUp, X, Search, BookOpen } from 'lucide-react';
+import { ThumbsUp, X, Search, BookOpen, PenLine } from 'lucide-react';
 import { api } from '@/lib/api';
 import { RoleName } from '@/types/auth';
 
@@ -128,8 +128,8 @@ export function KnowledgeView({ user, categories, onStartTicket }: KnowledgeView
           </p>
         </div>
         {isStaff && (
-          <button className="btn btn-primary" type="button" onClick={() => setShowAuthorModal(true)}>
-            + Write article
+          <button className="btn btn-primary" type="button" onClick={() => setShowAuthorModal(true)} style={{ display: 'inline-flex', alignItems: 'center' }}>
+            <PenLine className="w-4 h-4 mr-1.5" /> Write article
           </button>
         )}
       </div>

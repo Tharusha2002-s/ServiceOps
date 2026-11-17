@@ -1,8 +1,29 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, X, Laptop, Monitor, Wifi, KeyRound, Printer, HardDrive, Package, Search } from 'lucide-react';
 import { api } from '@/lib/api';
 import { RoleName } from '@/types/auth';
+
+const getAssetIcon = (type?: string) => {
+  switch (type?.toUpperCase()) {
+    case 'LAPTOP':
+      return <Laptop className="w-4 h-4 text-amber-700 shrink-0" />;
+    case 'DESKTOP':
+    case 'MONITOR':
+      return <Monitor className="w-4 h-4 text-sky-700 shrink-0" />;
+    case 'NETWORK':
+      return <Wifi className="w-4 h-4 text-emerald-700 shrink-0" />;
+    case 'LICENSE':
+      return <KeyRound className="w-4 h-4 text-purple-700 shrink-0" />;
+    case 'PRINTER':
+      return <Printer className="w-4 h-4 text-slate-700 shrink-0" />;
+    case 'DOCK':
+      return <HardDrive className="w-4 h-4 text-blue-700 shrink-0" />;
+    default:
+      return <Package className="w-4 h-4 text-amber-700 shrink-0" />;
+  }
+};
 
 interface AssetsViewProps {
   user: any;
@@ -125,8 +146,8 @@ export function AssetsView({ user, usersList, onOpenTicket }: AssetsViewProps) {
           </p>
         </div>
         {canManage && (
-          <button className="btn btn-primary" type="button" onClick={openCreateModal}>
-            + Register asset
+          <button className="btn btn-primary" type="button" onClick={openCreateModal} style={{ display: 'inline-flex', alignItems: 'center' }}>
+            <Plus className="w-4 h-4 mr-1.5" /> Register asset
           </button>
         )}
       </div>
@@ -170,7 +191,10 @@ export function AssetsView({ user, usersList, onOpenTicket }: AssetsViewProps) {
               <tr key={a.id}>
                 <td>
                   <div className="mono">{a.assetTag}</div>
-                  <div>{a.name}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                    {getAssetIcon(a.assetType)}
+                    <span>{a.name}</span>
+                  </div>
                   {a.location && <div className="hint">{a.location}</div>}
                 </td>
                 <td>
@@ -231,8 +255,8 @@ export function AssetsView({ user, usersList, onOpenTicket }: AssetsViewProps) {
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="row-between" style={{ marginBottom: 14 }}>
               <h3 style={{ margin: 0 }}>{editing ? `Edit ${editing.assetTag}` : 'Register IT Asset'}</h3>
-              <button className="btn btn-ghost" type="button" onClick={() => setShowModal(false)}>
-                ✕
+              <button className="btn btn-ghost" type="button" onClick={() => setShowModal(false)} aria-label="Close">
+                <X className="w-4 h-4" />
               </button>
             </div>
             <form onSubmit={handleSave} className="stack">

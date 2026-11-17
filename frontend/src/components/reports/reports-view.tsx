@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { Download, Inbox, CheckCircle2, ShieldCheck, Clock } from 'lucide-react';
 import { api } from '@/lib/api';
 
 type ReportRange = '7d' | '30d' | 'month' | 'quarter';
@@ -95,8 +96,9 @@ export function ReportsView() {
           id="btn-export-csv"
           disabled={exporting}
           onClick={handleExportCsv}
+          style={{ display: 'inline-flex', alignItems: 'center' }}
         >
-          {exporting ? 'Exporting CSV...' : 'Export CSV report'}
+          <Download className="w-4 h-4 mr-1.5" /> {exporting ? 'Exporting CSV...' : 'Export CSV report'}
         </button>
       </div>
 
@@ -124,22 +126,30 @@ export function ReportsView() {
 
       <div className="stats">
         <div className="stat">
-          <span>Tickets opened</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Inbox className="w-3.5 h-3.5 text-copper" /> Tickets opened
+          </span>
           <strong>{loading && !summary ? '...' : kpis.ticketsOpened}</strong>
           <em>{kpis.openCount} currently active</em>
         </div>
         <div className="stat">
-          <span>Tickets resolved</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Tickets resolved
+          </span>
           <strong>{loading && !summary ? '...' : kpis.ticketsResolved}</strong>
           <em>{kpis.resolutionRatePct}% resolution rate</em>
         </div>
         <div className={`stat ${kpis.slaCompliancePct >= 90 ? 'good' : 'warn'}`}>
-          <span>SLA compliance</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <ShieldCheck className="w-3.5 h-3.5 text-amber-600" /> SLA compliance
+          </span>
           <strong>{loading && !summary ? '...' : `${kpis.slaCompliancePct}%`}</strong>
           <em>{kpis.breachedCount} breached in window</em>
         </div>
         <div className="stat good">
-          <span>Median response</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Clock className="w-3.5 h-3.5 text-sky-600" /> Median response
+          </span>
           <strong>{loading && !summary ? '...' : `${kpis.medianResponseMinutes}m`}</strong>
           <em>Avg {kpis.avgResponseMinutes}m first reply</em>
         </div>
