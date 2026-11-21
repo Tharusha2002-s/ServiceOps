@@ -15,6 +15,7 @@ datasource db {
 // ==========================================
 
 enum UserStatus {
+  PENDING_APPROVAL
   ACTIVE
   SUSPENDED
   DEACTIVATED

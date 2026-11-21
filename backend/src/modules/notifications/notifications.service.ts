@@ -148,13 +148,31 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
         id: { in: uniqueRecipientIds },
         status: UserStatus.ACTIVE,
       },
-      select: { id: true, email: true, firstName: true, lastName: true },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        userRoles: {
+          select: {
+            role: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     const createdNotifications = [];
 
     for (const recipient of recipients) {
-      const sendEmail = params.sendEmail !== false;
+      // Exclude SYSTEM_ADMINISTRATOR from receiving email notifications (per business requirement)
+      const isAdmin = recipient.userRoles?.some(
+        (ur) => ur.role?.name === RoleName.SYSTEM_ADMINISTRATOR,
+      );
+      const sendEmail = !isAdmin && params.sendEmail !== false;
       const now = new Date();
 
       const notification = await this.prisma.notification.create({
@@ -282,11 +300,13 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     const nextAttempt = delivery.attempts + 1;
 
     try {
-      await this.mailService.sendEmail({
-        to: data.recipientEmail,
-        subject: `[ServiceOps] ${data.title}`,
-        text: `Hello ${data.recipientName || 'Colleague'},\n\n${data.title}\n${data.message}\n\n— ServiceOps Enterprise ITSM`,
-      });
+      await this.mailService.sendOperationalNotificationEmail(
+        data.recipientEmail,
+        data.recipientName || 'Colleague',
+        data.title,
+        data.message,
+        data.linkUrl,
+      );
 
       await this.prisma.notificationDelivery.update({
         where: { id: data.deliveryId },

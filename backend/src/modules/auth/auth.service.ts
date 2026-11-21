@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/database/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { MailService } from '../notifications/mail.service';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/password-reset.dto';
 import * as argon2 from 'argon2';
@@ -26,6 +27,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly auditService: AuditService,
+    private readonly mailService: MailService,
   ) {}
 
   /**
@@ -63,6 +65,12 @@ export class AuthService {
     }
 
     // Check account status
+    if (user.status === UserStatus.PENDING_APPROVAL) {
+      throw new UnauthorizedException(
+        'Your employee account is pending administrator approval. You will receive an email once approved before you can sign in.',
+      );
+    }
+
     if (user.status !== UserStatus.ACTIVE && user.status !== UserStatus.LOCKED) {
       throw new UnauthorizedException(`Account is currently ${user.status.toLowerCase()}. Contact your administrator.`);
     }
@@ -371,7 +379,7 @@ export class AuthService {
         lastName: dto.lastName.trim(),
         department: dto.department?.trim() || 'General Operations',
         jobTitle: dto.jobTitle?.trim() || 'Employee',
-        status: UserStatus.ACTIVE,
+        status: UserStatus.PENDING_APPROVAL,
         userRoles: {
           create: {
             roleId: employeeRole.id,
@@ -383,6 +391,35 @@ export class AuthService {
       },
     });
 
+    // Send confirmation email to the employee about pending approval
+    void this.mailService.sendRegistrationPendingEmail(
+      user.email,
+      `${user.firstName} ${user.lastName}`,
+    );
+
+    // Notify all System Administrators that a new account is awaiting review
+    const admins = await this.prisma.user.findMany({
+      where: {
+        status: UserStatus.ACTIVE,
+        userRoles: {
+          some: { role: { name: RoleName.SYSTEM_ADMINISTRATOR } },
+        },
+      },
+      select: { email: true },
+    });
+
+    if (admins.length > 0) {
+      void this.mailService.sendRegistrationAdminAlertEmail(
+        admins.map((a) => a.email),
+        {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          department: user.department || undefined,
+        },
+      );
+    }
+
     return {
       id: user.id,
       email: user.email,
@@ -390,7 +427,10 @@ export class AuthService {
       lastName: user.lastName,
       department: user.department,
       jobTitle: user.jobTitle,
+      status: user.status,
       roles: user.userRoles.map((ur) => ur.role.name),
+      message:
+        'Registration submitted successfully. Your account is pending administrator approval before login is enabled.',
     };
   }
 
@@ -419,6 +459,13 @@ export class AuthService {
           },
         }),
       ]);
+
+      // Dispatch Brevo email with password reset link and single-use token
+      void this.mailService.sendPasswordResetEmail(
+        user.email,
+        `${user.firstName} ${user.lastName}`,
+        rawToken,
+      );
 
       if (this.configService.get<string>('nodeEnv') !== 'production') {
         this.logger.log(

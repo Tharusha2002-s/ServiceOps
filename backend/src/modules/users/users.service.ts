@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { MailService } from '../notifications/mail.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as argon2 from 'argon2';
 import { RoleName, UserStatus } from '@prisma/client';
@@ -15,6 +16,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly mailService: MailService,
   ) { }
 
   async findAll() {
@@ -163,6 +165,14 @@ export class UsersService {
       beforeState: { status: user.status },
       afterState: { status: updated.status },
     });
+
+    // Notify employee when System Administrator approves account
+    if (user.status === UserStatus.PENDING_APPROVAL && status === UserStatus.ACTIVE) {
+      void this.mailService.sendAccountApprovedEmail(
+        user.email,
+        `${user.firstName} ${user.lastName}`,
+      );
+    }
 
     return updated;
   }

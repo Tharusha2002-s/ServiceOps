@@ -1,16 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { api } from '@/lib/api';
 
 type AuthMode = 'login' | 'register' | 'reset';
 
-export default function LoginPage() {
+function LoginFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, isAuthenticated } = useAuth();
 
   const [mode, setMode] = useState<AuthMode>('login');
@@ -34,6 +35,23 @@ export default function LoginPage() {
   const [resetStep, setResetStep] = useState<'request' | 'confirm'>('request');
   const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
+
+  // Read URL search params (e.g. from Brevo password reset link)
+  useEffect(() => {
+    const modeParam = searchParams.get('mode');
+    const tokenParam = searchParams.get('token');
+    const emailParam = searchParams.get('email');
+    if (modeParam === 'reset') {
+      setMode('reset');
+      if (tokenParam) {
+        setResetStep('confirm');
+        setResetToken(tokenParam);
+      }
+      if (emailParam) {
+        setResetEmail(emailParam);
+      }
+    }
+  }, [searchParams]);
 
   // If already authenticated, redirect
   if (isAuthenticated) {
@@ -83,7 +101,9 @@ export default function LoginPage() {
       setEmail(regEmail);
       setPassword(regPassword);
       setMode('login');
-      setSuccessMsg(`Account created with Employee access for ${regEmail}. You can now sign in.`);
+      setSuccessMsg(
+        `Registration received for ${regEmail}! In accordance with enterprise security policy, your employee account requires review and approval from a System Administrator. An email notification has been dispatched to your inbox.`,
+      );
       setRegFirstName('');
       setRegLastName('');
       setRegDepartment('');
@@ -533,5 +553,19 @@ export default function LoginPage() {
         </div>
       </div>
     </section>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="screen is-on" style={{ padding: 48, textAlign: 'center' }}>
+          <p className="hint">Loading ServiceOps secure sign-in...</p>
+        </div>
+      }
+    >
+      <LoginFormContent />
+    </Suspense>
   );
 }

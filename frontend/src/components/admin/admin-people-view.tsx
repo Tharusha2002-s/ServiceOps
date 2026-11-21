@@ -40,9 +40,11 @@ export function AdminPeopleView({
 
   const countByRole = (role: RoleName) =>
     usersList.filter((u) => u.userRoles?.some((ur: any) => ur.role?.name === role)).length;
+  const pendingCount = usersList.filter((u) => u.status === 'PENDING_APPROVAL').length;
   const lockedCount = usersList.filter((u) => u.status === 'LOCKED' || u.status === 'SUSPENDED').length;
 
   const filtered = usersList.filter((u) => {
+    if (roleFilter === 'PENDING_APPROVAL') return u.status === 'PENDING_APPROVAL';
     if (roleFilter === 'LOCKED') return u.status === 'LOCKED' || u.status === 'SUSPENDED' || u.status === 'DEACTIVATED';
     if (roleFilter === 'ALL') return true;
     return u.userRoles?.some((ur: any) => ur.role?.name === roleFilter);
@@ -134,6 +136,7 @@ export function AdminPeopleView({
       <div className="filters" id="people-role-filters">
         {[
           { key: 'ALL', label: `All accounts (${usersList.length})` },
+          { key: 'PENDING_APPROVAL', label: `Pending Approval (${pendingCount})`, badge: pendingCount > 0 },
           { key: RoleName.EMPLOYEE, label: `Employees (${countByRole(RoleName.EMPLOYEE)})` },
           { key: RoleName.IT_SUPPORT_AGENT, label: `Agents (${countByRole(RoleName.IT_SUPPORT_AGENT)})` },
           { key: RoleName.IT_MANAGER, label: `Managers (${countByRole(RoleName.IT_MANAGER)})` },
@@ -146,6 +149,16 @@ export function AdminPeopleView({
             className="people-filter-btn"
             aria-pressed={roleFilter === f.key}
             onClick={() => setRoleFilter(f.key)}
+            style={
+              f.badge
+                ? {
+                    background: roleFilter === f.key ? 'var(--amber)' : '#fdf6e7',
+                    borderColor: 'var(--amber)',
+                    color: roleFilter === f.key ? '#fff' : 'var(--amber)',
+                    fontWeight: 600,
+                  }
+                : {}
+            }
           >
             {f.label}
           </button>
@@ -184,6 +197,10 @@ export function AdminPeopleView({
                   <td>
                     {u.status === 'ACTIVE' ? (
                       <span className="pill ok">Active</span>
+                    ) : u.status === 'PENDING_APPROVAL' ? (
+                      <span className="pill risk" style={{ background: '#f8efd8', color: 'var(--amber)', border: '1px solid #e7c578', fontWeight: 600 }}>
+                        Pending Approval
+                      </span>
                     ) : u.status === 'LOCKED' ? (
                       <span className="pill breach">Locked</span>
                     ) : (
@@ -193,49 +210,76 @@ export function AdminPeopleView({
                   {isAdmin && (
                     <td>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <button
-                          className="btn btn-ghost"
-                          type="button"
-                          style={{ padding: '4px 8px', fontSize: 12 }}
-                          onClick={() => {
-                            setEditingUser(u);
-                            setEditRole(roleObj?.name || RoleName.EMPLOYEE);
-                          }}
-                        >
-                          Edit role
-                        </button>
-                        {u.status === 'LOCKED' ? (
-                          <button
-                            className="btn btn-primary"
-                            type="button"
-                            disabled={saving}
-                            style={{ padding: '4px 10px', fontSize: 12 }}
-                            onClick={() => handleStatusChange(u.id, 'ACTIVE')}
-                          >
-                            Unlock
-                          </button>
-                        ) : u.status === 'ACTIVE' ? (
-                          !isSelf && (
+                        {u.status === 'PENDING_APPROVAL' ? (
+                          <>
+                            <button
+                              className="btn btn-primary"
+                              type="button"
+                              disabled={saving}
+                              style={{ padding: '4px 10px', fontSize: 12, background: 'var(--moss)', borderColor: 'var(--moss)', display: 'inline-flex', alignItems: 'center' }}
+                              onClick={() => handleStatusChange(u.id, 'ACTIVE')}
+                              title="Approve employee registration and grant login access"
+                            >
+                              <UserCheck className="w-3.5 h-3.5 mr-1" /> Approve
+                            </button>
                             <button
                               className="btn btn-ghost"
                               type="button"
                               disabled={saving}
-                              style={{ padding: '4px 8px', fontSize: 12, color: 'var(--rose)' }}
-                              onClick={() => handleStatusChange(u.id, 'SUSPENDED')}
+                              style={{ padding: '4px 8px', fontSize: 12, color: 'var(--rose)', display: 'inline-flex', alignItems: 'center' }}
+                              onClick={() => handleStatusChange(u.id, 'DEACTIVATED')}
+                              title="Reject registration"
                             >
-                              Suspend
+                              <X className="w-3.5 h-3.5 mr-1" /> Reject
                             </button>
-                          )
+                          </>
                         ) : (
-                          <button
-                            className="btn btn-ghost"
-                            type="button"
-                            disabled={saving}
-                            style={{ padding: '4px 8px', fontSize: 12 }}
-                            onClick={() => handleStatusChange(u.id, 'ACTIVE')}
-                          >
-                            Activate
-                          </button>
+                          <>
+                            <button
+                              className="btn btn-ghost"
+                              type="button"
+                              style={{ padding: '4px 8px', fontSize: 12 }}
+                              onClick={() => {
+                                setEditingUser(u);
+                                setEditRole(roleObj?.name || RoleName.EMPLOYEE);
+                              }}
+                            >
+                              Edit role
+                            </button>
+                            {u.status === 'LOCKED' ? (
+                              <button
+                                className="btn btn-primary"
+                                type="button"
+                                disabled={saving}
+                                style={{ padding: '4px 10px', fontSize: 12 }}
+                                onClick={() => handleStatusChange(u.id, 'ACTIVE')}
+                              >
+                                Unlock
+                              </button>
+                            ) : u.status === 'ACTIVE' ? (
+                              !isSelf && (
+                                <button
+                                  className="btn btn-ghost"
+                                  type="button"
+                                  disabled={saving}
+                                  style={{ padding: '4px 8px', fontSize: 12, color: 'var(--rose)' }}
+                                  onClick={() => handleStatusChange(u.id, 'SUSPENDED')}
+                                >
+                                  Suspend
+                                </button>
+                              )
+                            ) : (
+                              <button
+                                className="btn btn-ghost"
+                                type="button"
+                                disabled={saving}
+                                style={{ padding: '4px 8px', fontSize: 12 }}
+                                onClick={() => handleStatusChange(u.id, 'ACTIVE')}
+                              >
+                                Activate
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>
