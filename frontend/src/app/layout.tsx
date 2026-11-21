@@ -3,7 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/context/auth-context';
 
 export const metadata: Metadata = {
-  title: 'ServiceOps — Enterprise ITSM Platform',
+  title: 'ServiceOps',
   description: 'Production-ready IT Service Management & Operations Platform',
   icons: {
     icon: [

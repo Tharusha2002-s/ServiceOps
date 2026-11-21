@@ -141,8 +141,13 @@ export class MailService {
         } else {
           const errText = await res.text();
           this.logger.warn(
-            `[BREVO API ERROR] (${res.status}): ${errText} — attempting SMTP relay if configured`,
+            `[BREVO API ERROR] (${res.status}): ${errText}`,
           );
+          if (errText.includes('unrecognised IP address') || errText.includes('authorised_ips')) {
+            this.logger.warn(
+              `⚠️ [BREVO ACTION REQUIRED] Brevo blocked this email because 'Authorized IPs' is turned ON in your Brevo account. Open: https://app.brevo.com/security/authorised_ips to add your IP or disable IP restrictions.`,
+            );
+          }
         }
       } catch (err: any) {
         this.logger.warn(`[BREVO API EXCEPTION] ${err?.message} — attempting SMTP relay if configured`);
