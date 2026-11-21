@@ -253,7 +253,6 @@ export class MailService {
       }
     </div>
     <div class="footer">
-      
       Colombo Office · Secure Platform Messaging
     </div>
   </div>
