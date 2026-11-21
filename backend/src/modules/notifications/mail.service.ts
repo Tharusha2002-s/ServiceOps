@@ -161,11 +161,11 @@ export class MailService {
           this.mode === 'brevo-smtp'
             ? this.transporter
             : nodemailer.createTransport({
-                host: 'smtp-relay.brevo.com',
-                port: 587,
-                secure: false,
-                auth: { user: this.brevoSmtpLogin, pass: this.brevoSmtpKey },
-              });
+              host: 'smtp-relay.brevo.com',
+              port: 587,
+              secure: false,
+              auth: { user: this.brevoSmtpLogin, pass: this.brevoSmtpKey },
+            });
 
         const info = await smtpTransport.sendMail({
           from: `"${this.fromName}" <${this.fromEmail}>`,
@@ -197,10 +197,10 @@ export class MailService {
 
       this.logger.log(
         `\n================= [CAPTURED EMAIL DISPATCH] =================\n` +
-          `To: ${payload.to}\n` +
-          `Subject: ${payload.subject}\n` +
-          `Body:\n${payload.text}\n` +
-          `=============================================================\n`,
+        `To: ${payload.to}\n` +
+        `Subject: ${payload.subject}\n` +
+        `Body:\n${payload.text}\n` +
+        `=============================================================\n`,
       );
 
       return {
@@ -247,14 +247,13 @@ export class MailService {
     <div class="content">
       <h1>${title}</h1>
       ${bodyContent}
-      ${
-        actionButton
-          ? `<div style="text-align: center; margin: 24px 0;"><a href="${actionButton.url}" class="btn" target="_blank">${actionButton.text} &rarr;</a></div>`
-          : ''
+      ${actionButton
+        ? `<div style="text-align: center; margin: 24px 0;"><a href="${actionButton.url}" class="btn" target="_blank">${actionButton.text} &rarr;</a></div>`
+        : ''
       }
     </div>
     <div class="footer">
-      This is an automated notification from ServiceOps IT Desk.<br>
+      
       Colombo Office · Secure Platform Messaging
     </div>
   </div>
