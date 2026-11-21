@@ -215,9 +215,17 @@ function LoginFormContent() {
         <div className="auth-story">
           <div>
             <Link href="/" className="brand-row hover:opacity-85" style={{ textDecoration: 'none' }}>
-              <span className="mark">
-                <i></i>
-              </span>{' '}
+              <img
+                src="/logo.png"
+                alt="ServiceOps Logo"
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 6.5,
+                  objectFit: 'cover',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
+                }}
+              />{' '}
               ServiceOps
             </Link>
 

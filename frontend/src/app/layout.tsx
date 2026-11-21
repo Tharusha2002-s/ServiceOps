@@ -7,11 +7,12 @@ export const metadata: Metadata = {
   description: 'Production-ready IT Service Management & Operations Platform',
   icons: {
     icon: [
+      { url: '/logo.png', type: 'image/png' },
       { url: '/icon.svg', type: 'image/svg+xml' },
       { url: '/favicon.ico', sizes: '32x32' },
     ],
     shortcut: '/favicon.ico',
-    apple: '/icon.svg',
+    apple: '/logo.png',
   },
 };
 

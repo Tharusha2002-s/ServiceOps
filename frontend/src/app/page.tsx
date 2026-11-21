@@ -50,13 +50,15 @@ export default function SplashPage() {
           >
             {/* Logo */}
             <img
-              src="/icon.svg"
+              src="/logo.png"
               alt="ServiceOps Logo"
               style={{
-                width: 38,
-                height: 38,
-                objectFit: 'contain',
+                width: 40,
+                height: 40,
+                borderRadius: 9,
+                objectFit: 'cover',
                 flexShrink: 0,
+                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.4)',
               }}
             />
 

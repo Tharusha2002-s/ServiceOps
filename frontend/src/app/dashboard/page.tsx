@@ -591,9 +591,18 @@ export default function DashboardPage() {
         <aside className={`rail ${mobileNavOpen ? 'is-open' : ''}`}>
           <div className="rail-header">
             <div className="rail-brand">
-              <span className="mark">
-                <i></i>
-              </span>
+              <img
+                src="/logo.png"
+                alt="ServiceOps Logo"
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 7,
+                  objectFit: 'cover',
+                  flexShrink: 0,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
+                }}
+              />
               <div>
                 <strong>ServiceOps</strong>
                 <span>Northwind Internal IT</span>

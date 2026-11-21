@@ -228,8 +228,7 @@ export class MailService {
   <style>
     body { margin: 0; padding: 0; background-color: #f7f3eb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1c1915; }
     .container { max-width: 580px; margin: 32px auto; background: #ffffff; border-radius: 12px; border: 1px solid #e4ddd2; overflow: hidden; box-shadow: 0 4px 20px rgba(28, 25, 21, 0.06); }
-    .header { background: #1c1915; padding: 24px 32px; border-bottom: 2px solid #8e3f1e; }
-    .brand-mark { display: inline-block; width: 14px; height: 14px; background: #8e3f1e; border: 1.5px solid #e7b08a; border-radius: 3px; vertical-align: middle; margin-right: 8px; }
+    .header { background: #07203f; padding: 22px 32px; border-bottom: 2px solid #1a3c68; }
     .brand-name { color: #f4efe6; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; vertical-align: middle; }
     .content { padding: 32px; }
     h1 { font-size: 22px; font-weight: 600; color: #1c1915; margin: 0 0 16px; line-height: 1.3; }
@@ -242,7 +241,7 @@ export class MailService {
 <body>
   <div class="container">
     <div class="header">
-      <span class="brand-mark"></span>
+      <img src="${this.frontendUrl}/logo.png" width="26" height="26" style="vertical-align: middle; border-radius: 6px; margin-right: 10px;" alt="ServiceOps" />
       <span class="brand-name">ServiceOps · Enterprise IT Operations</span>
     </div>
     <div class="content">
