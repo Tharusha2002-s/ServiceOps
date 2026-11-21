@@ -15,7 +15,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
-import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
+import { ForgotPasswordDto, ResetPasswordDto, VerifyResetCodeDto } from './dto/password-reset.dto';
 import { Public } from '@/common/decorators/public.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
@@ -143,6 +143,20 @@ export class AuthController {
   @ApiOperation({ summary: 'Request single-use password reset token (anti-enumeration safe)' })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     const result = await this.authService.requestPasswordReset(dto.email);
+    return {
+      statusCode: HttpStatus.OK,
+      ...result,
+    };
+  }
+
+  @Public()
+  @Post('verify-reset-code')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Validate 6-digit password reset verification code' })
+  @ApiResponse({ status: 200, description: 'Code is valid and unconsumed' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired verification code' })
+  async verifyResetCode(@Body() dto: VerifyResetCodeDto) {
+    const result = await this.authService.verifyResetCode(dto.code, dto.email);
     return {
       statusCode: HttpStatus.OK,
       ...result,

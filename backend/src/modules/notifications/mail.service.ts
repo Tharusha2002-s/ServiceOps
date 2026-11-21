@@ -15,6 +15,7 @@ export interface EmailSendPayload {
 export class MailService {
   private readonly logger = new Logger(MailService.name);
   private readonly transporter: Transporter;
+  private readonly fallbackTransporter: Transporter;
   private readonly mode: 'brevo-api' | 'brevo-smtp' | 'smtp' | 'dev-json';
   private readonly fromEmail: string;
   private readonly fromName: string;
@@ -24,6 +25,8 @@ export class MailService {
   private readonly frontendUrl: string;
 
   constructor(private readonly configService: ConfigService) {
+    this.fallbackTransporter = nodemailer.createTransport({ jsonTransport: true });
+
     const rawKey = (
       this.configService.get<string>('BREVO_API_KEY') ||
       process.env.BREVO_API_KEY ||
@@ -86,7 +89,7 @@ export class MailService {
       );
     } else {
       this.mode = 'dev-json';
-      this.transporter = nodemailer.createTransport({ jsonTransport: true });
+      this.transporter = this.fallbackTransporter;
       this.logger.log(
         'MailService active in local simulation / dev-json capture mode.',
       );
@@ -177,27 +180,35 @@ export class MailService {
       }
     }
 
-    // 3. Fallback Local Development Transport
-    const info = await this.transporter.sendMail({
-      from: `"${this.fromName}" <${this.fromEmail}>`,
-      to: payload.to,
-      subject: payload.subject,
-      text: payload.text,
-      html: payload.html,
-    });
+    // 3. Fallback Local Development Transport (Safe In-Memory Capture, Never Throws)
+    try {
+      const info = await this.fallbackTransporter.sendMail({
+        from: `"${this.fromName}" <${this.fromEmail}>`,
+        to: payload.to,
+        subject: payload.subject,
+        text: payload.text,
+        html: payload.html,
+      });
 
-    this.logger.log(
-      `\n================= [SIMULATED BREVO EMAIL DISPATCH] =================\n` +
-        `To: ${payload.to}\n` +
-        `Subject: ${payload.subject}\n` +
-        `Body:\n${payload.text}\n` +
-        `====================================================================\n`,
-    );
+      this.logger.log(
+        `\n================= [CAPTURED EMAIL DISPATCH] =================\n` +
+          `To: ${payload.to}\n` +
+          `Subject: ${payload.subject}\n` +
+          `Body:\n${payload.text}\n` +
+          `=============================================================\n`,
+      );
 
-    return {
-      messageId: info.messageId || `dev-${Date.now()}`,
-      mode: 'dev-json',
-    };
+      return {
+        messageId: info.messageId || `dev-${Date.now()}`,
+        mode: 'dev-json',
+      };
+    } catch (fallbackErr: any) {
+      this.logger.warn(`Fallback email capture error: ${fallbackErr?.message}`);
+      return {
+        messageId: `err-${Date.now()}`,
+        mode: 'error',
+      };
+    }
   }
 
   /**

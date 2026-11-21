@@ -32,9 +32,10 @@ function LoginFormContent() {
 
   // Forgot / Reset Password states
   const [resetEmail, setResetEmail] = useState('');
-  const [resetStep, setResetStep] = useState<'request' | 'confirm'>('request');
+  const [resetStep, setResetStep] = useState<'request' | 'otp' | 'new-password'>('request');
   const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   // Read URL search params (e.g. from Brevo password reset link)
   useEffect(() => {
@@ -43,12 +44,23 @@ function LoginFormContent() {
     const emailParam = searchParams.get('email');
     if (modeParam === 'reset') {
       setMode('reset');
-      if (codeParam) {
-        setResetStep('confirm');
-        setResetToken(codeParam);
-      }
       if (emailParam) {
         setResetEmail(emailParam);
+      }
+      if (codeParam) {
+        setResetToken(codeParam);
+        // Pre-validate the code from URL link
+        api
+          .post('/auth/verify-reset-code', {
+            code: codeParam,
+            email: emailParam || undefined,
+          })
+          .then(() => {
+            setResetStep('new-password');
+          })
+          .catch(() => {
+            setResetStep('otp');
+          });
       }
     }
   }, [searchParams]);
@@ -102,7 +114,7 @@ function LoginFormContent() {
       setPassword(regPassword);
       setMode('login');
       setSuccessMsg(
-        `Registration received for ${regEmail}! In accordance with enterprise security policy, your employee account requires review and approval from a System Administrator. An email notification has been dispatched to your inbox.`,
+        `Registration received! Your employee account requires approval from a System Administrator before signing in.`,
       );
       setRegFirstName('');
       setRegLastName('');
@@ -123,12 +135,9 @@ function LoginFormContent() {
     setLoading(true);
     clearFeedback();
     try {
-      const res = await api.post('/auth/forgot-password', { email: resetEmail });
-      setSuccessMsg(
-        res.data?.message ||
-          'If an active account exists for that email, a 6-digit verification code has been dispatched.',
-      );
-      setResetStep('confirm');
+      await api.post('/auth/forgot-password', { email: resetEmail });
+      // Transition immediately to OTP step without showing any email dispatch banner
+      setResetStep('otp');
     } catch (err: any) {
       const message = err?.response?.data?.message || 'Unable to process reset request.';
       setErrorMsg(Array.isArray(message) ? message.join(', ') : message);
@@ -137,9 +146,45 @@ function LoginFormContent() {
     }
   };
 
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanCode = resetToken.trim();
+    if (cleanCode.length !== 6) {
+      setErrorMsg('Please enter the complete 6-digit verification code.');
+      return;
+    }
+    setLoading(true);
+    clearFeedback();
+    try {
+      await api.post('/auth/verify-reset-code', {
+        code: cleanCode,
+        email: resetEmail || undefined,
+      });
+      // OTP is valid - advance to enter and confirm new password
+      setResetStep('new-password');
+    } catch (err: any) {
+      const message = err?.response?.data?.message || 'Invalid or expired verification code.';
+      setErrorMsg(Array.isArray(message) ? message.join(', ') : message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleConfirmReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resetToken || !newPassword) return;
+    if (!resetToken) {
+      setErrorMsg('Verification code is missing. Please restart the reset process.');
+      setResetStep('otp');
+      return;
+    }
+    if (!newPassword || newPassword.length < 8) {
+      setErrorMsg('New password must be at least 8 characters long.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setErrorMsg('Passwords do not match. Please ensure both passwords match exactly.');
+      return;
+    }
     setLoading(true);
     clearFeedback();
     try {
@@ -147,11 +192,12 @@ function LoginFormContent() {
         token: resetToken,
         newPassword,
       });
-      setSuccessMsg(res.data?.message || 'Password updated! Please sign in with your new password.');
+      setSuccessMsg(res.data?.message || 'Password updated successfully! Please sign in with your new password.');
       setMode('login');
       setResetStep('request');
       setResetToken('');
       setNewPassword('');
+      setConfirmPassword('');
       if (resetEmail) setEmail(resetEmail);
       setPassword('');
     } catch (err: any) {
@@ -177,10 +223,9 @@ function LoginFormContent() {
 
             {mode === 'reset' ? (
               <>
-                <h1>Reset access with a secure 6-digit code.</h1>
+                <h1>Reset your account access.</h1>
                 <p className="lede">
-                  If the email matches an active account, a 6-digit verification code is issued to your inbox.
-                  The screen does not reveal whether the address exists.
+                  Follow the verification steps to securely choose a new password for your account.
                 </p>
               </>
             ) : mode === 'register' ? (
@@ -474,7 +519,7 @@ function LoginFormContent() {
                 </div>
               )}
 
-              {resetStep === 'request' ? (
+              {resetStep === 'request' && (
                 <form onSubmit={handleRequestReset}>
                   <div className="field">
                     <label htmlFor="reset-email">Work email</label>
@@ -488,7 +533,7 @@ function LoginFormContent() {
                     />
                   </div>
                   <button className="btn btn-primary btn-block" type="submit" disabled={loading}>
-                    {loading ? 'Sending verification code...' : 'Send 6-digit code'}
+                    {loading ? 'Continuing...' : 'Continue'}
                   </button>
                   <p style={{ marginTop: 12 }}>
                     <button
@@ -497,38 +542,58 @@ function LoginFormContent() {
                       style={{ padding: 0, fontSize: 13, color: 'var(--ink-soft)', display: 'inline-flex', alignItems: 'center' }}
                       onClick={() => {
                         clearFeedback();
-                        setResetStep('confirm');
+                        setResetStep('otp');
                       }}
                     >
                       Already have a 6-digit code? Enter it here <ArrowRight className="w-3.5 h-3.5 ml-1 inline" />
                     </button>
                   </p>
                 </form>
-              ) : (
-                <form onSubmit={handleConfirmReset}>
+              )}
+
+              {resetStep === 'otp' && (
+                <form onSubmit={handleVerifyOtp}>
                   <div className="field">
-                    <label htmlFor="reset-token">6-Digit Verification Code</label>
+                    <label htmlFor="reset-token">Enter 6-Digit Code</label>
                     <input
                       id="reset-token"
                       required
                       maxLength={6}
                       value={resetToken}
                       onChange={(e) => setResetToken(e.target.value.replace(/\D/g, ''))}
-                      placeholder="e.g. 749201"
+                      placeholder="------"
                       style={{
-                        letterSpacing: '6px',
-                        fontSize: '20px',
+                        letterSpacing: '8px',
+                        fontSize: '22px',
                         fontWeight: '700',
                         textAlign: 'center',
                         fontFamily: 'var(--mono)',
                       }}
                     />
-                    <small style={{ color: 'var(--ink-soft)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                      Check your email inbox for the 6-digit verification code.
-                    </small>
                   </div>
+                  <button className="btn btn-primary btn-block" type="submit" disabled={loading}>
+                    {loading ? 'Verifying code...' : 'Verify Code'}
+                  </button>
+                  <p style={{ marginTop: 12 }}>
+                    <button
+                      type="button"
+                      className="btn"
+                      style={{ padding: 0, fontSize: 13, color: 'var(--ink-soft)', display: 'inline-flex', alignItems: 'center' }}
+                      onClick={() => {
+                        clearFeedback();
+                        setResetStep('request');
+                      }}
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5 mr-1 inline" /> Change email address
+                    </button>
+                  </p>
+                </form>
+              )}
+
+              {resetStep === 'new-password' && (
+                <form onSubmit={handleConfirmReset}>
                   <div className="field">
-                    <label htmlFor="reset-new-pass">New password (min 8 chars)</label>
+                    <label htmlFor="reset-new-pass">New password</label>
                     <input
                       id="reset-new-pass"
                       type="password"
@@ -536,11 +601,23 @@ function LoginFormContent() {
                       minLength={8}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter new strong password"
+                      placeholder="At least 8 characters"
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="reset-confirm-pass">Confirm new password</label>
+                    <input
+                      id="reset-confirm-pass"
+                      type="password"
+                      required
+                      minLength={8}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Re-enter new password"
                     />
                   </div>
                   <button className="btn btn-primary btn-block" type="submit" disabled={loading}>
-                    {loading ? 'Verifying code...' : 'Verify Code & Reset Password'}
+                    {loading ? 'Updating password...' : 'Save New Password & Sign In'}
                   </button>
                 </form>
               )}

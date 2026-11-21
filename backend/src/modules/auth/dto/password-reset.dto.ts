@@ -8,9 +8,9 @@ export class ForgotPasswordDto {
 }
 
 export class ResetPasswordDto {
-  @ApiProperty({ description: 'Single-use cryptographic reset token issued via forgot-password flow' })
+  @ApiProperty({ description: 'Single-use cryptographic reset token or 6-digit verification code' })
   @IsString()
-  @IsNotEmpty({ message: 'Reset token is required' })
+  @IsNotEmpty({ message: 'Reset code is required' })
   token: string;
 
   @ApiProperty({ example: 'NewSecurePass@123' })
@@ -19,5 +19,15 @@ export class ResetPasswordDto {
   @MinLength(8, { message: 'New password must be at least 8 characters long' })
   @MaxLength(128)
   newPassword: string;
+}
+
+export class VerifyResetCodeDto {
+  @ApiProperty({ example: '749201', description: '6-digit verification code' })
+  @IsString()
+  @IsNotEmpty({ message: 'Verification code is required' })
+  code: string;
+
+  @ApiProperty({ example: 'employee@serviceops.local', required: false })
+  email?: string;
 }
 

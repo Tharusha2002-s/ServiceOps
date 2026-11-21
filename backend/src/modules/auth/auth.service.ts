@@ -474,11 +474,15 @@ export class AuthService {
       ]);
 
       // Dispatch Brevo email with 6-digit verification code and clickable reset link
-      void this.mailService.sendPasswordResetEmail(
-        user.email,
-        `${user.firstName} ${user.lastName}`,
-        resetCode,
-      );
+      void this.mailService
+        .sendPasswordResetEmail(
+          user.email,
+          `${user.firstName} ${user.lastName}`,
+          resetCode,
+        )
+        .catch((err) => {
+          this.logger.warn(`Failed to dispatch reset email: ${err?.message}`);
+        });
 
       this.logger.log(
         `[PASSWORD RESET CODE] Issued 6-digit verification code for ${normalized}: ${resetCode}`,
@@ -486,7 +490,43 @@ export class AuthService {
     }
 
     return {
-      message: 'If an active account exists for that email, a 6-digit reset code has been dispatched.',
+      message: 'OK',
+    };
+  }
+
+  /**
+   * Validates whether a 6-digit verification code is valid, unexpired, and unconsumed.
+   */
+  async verifyResetCode(code: string, email?: string) {
+    const cleanCode = (code || '').trim();
+    if (!cleanCode) {
+      throw new BadRequestException('Verification code is required');
+    }
+
+    const tokenHash = this.hashToken(cleanCode);
+    const record = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+      include: { user: true },
+    });
+
+    if (!record || record.usedAt !== null || record.expiresAt < new Date()) {
+      throw new BadRequestException('Invalid or expired verification code');
+    }
+
+    if (
+      record.user.status === UserStatus.DEACTIVATED ||
+      record.user.status === UserStatus.SUSPENDED
+    ) {
+      throw new UnauthorizedException('Account cannot reset password in its current state');
+    }
+
+    if (email && record.user.email.toLowerCase() !== email.toLowerCase().trim()) {
+      throw new BadRequestException('Verification code does not match this account');
+    }
+
+    return {
+      valid: true,
+      email: record.user.email,
     };
   }
 
