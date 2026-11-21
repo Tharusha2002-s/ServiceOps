@@ -39,13 +39,13 @@ function LoginFormContent() {
   // Read URL search params (e.g. from Brevo password reset link)
   useEffect(() => {
     const modeParam = searchParams.get('mode');
-    const tokenParam = searchParams.get('token');
+    const codeParam = searchParams.get('code') || searchParams.get('token');
     const emailParam = searchParams.get('email');
     if (modeParam === 'reset') {
       setMode('reset');
-      if (tokenParam) {
+      if (codeParam) {
         setResetStep('confirm');
-        setResetToken(tokenParam);
+        setResetToken(codeParam);
       }
       if (emailParam) {
         setResetEmail(emailParam);
@@ -126,7 +126,7 @@ function LoginFormContent() {
       const res = await api.post('/auth/forgot-password', { email: resetEmail });
       setSuccessMsg(
         res.data?.message ||
-          'If an active account exists for that email, a single-use reset token has been dispatched.',
+          'If an active account exists for that email, a 6-digit verification code has been dispatched.',
       );
       setResetStep('confirm');
     } catch (err: any) {
@@ -177,9 +177,9 @@ function LoginFormContent() {
 
             {mode === 'reset' ? (
               <>
-                <h1>Reset access without exposing the account.</h1>
+                <h1>Reset access with a secure 6-digit code.</h1>
                 <p className="lede">
-                  If the email matches an active account, a single-use cryptographic token is issued.
+                  If the email matches an active account, a 6-digit verification code is issued to your inbox.
                   The screen does not reveal whether the address exists.
                 </p>
               </>
@@ -225,7 +225,7 @@ function LoginFormContent() {
           </div>
           <div className="auth-foot">
             {mode === 'reset'
-              ? 'Tokens expire after 30 minutes and revoke existing sessions on reset.'
+              ? 'Verification codes expire after 30 minutes and revoke existing sessions on reset.'
               : 'Northwind Internal IT · Colombo Office · Live System'}
           </div>
         </div>
@@ -488,7 +488,7 @@ function LoginFormContent() {
                     />
                   </div>
                   <button className="btn btn-primary btn-block" type="submit" disabled={loading}>
-                    {loading ? 'Issuing token...' : 'Send reset link'}
+                    {loading ? 'Sending verification code...' : 'Send 6-digit code'}
                   </button>
                   <p style={{ marginTop: 12 }}>
                     <button
@@ -500,21 +500,32 @@ function LoginFormContent() {
                         setResetStep('confirm');
                       }}
                     >
-                      Already have a reset token? Enter it here <ArrowRight className="w-3.5 h-3.5 ml-1 inline" />
+                      Already have a 6-digit code? Enter it here <ArrowRight className="w-3.5 h-3.5 ml-1 inline" />
                     </button>
                   </p>
                 </form>
               ) : (
                 <form onSubmit={handleConfirmReset}>
                   <div className="field">
-                    <label htmlFor="reset-token">Single-use reset token</label>
+                    <label htmlFor="reset-token">6-Digit Verification Code</label>
                     <input
                       id="reset-token"
                       required
+                      maxLength={6}
                       value={resetToken}
-                      onChange={(e) => setResetToken(e.target.value)}
-                      placeholder="Paste token from email or server log"
+                      onChange={(e) => setResetToken(e.target.value.replace(/\D/g, ''))}
+                      placeholder="e.g. 749201"
+                      style={{
+                        letterSpacing: '6px',
+                        fontSize: '20px',
+                        fontWeight: '700',
+                        textAlign: 'center',
+                        fontFamily: 'var(--mono)',
+                      }}
                     />
+                    <small style={{ color: 'var(--ink-soft)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                      Check your email inbox for the 6-digit verification code.
+                    </small>
                   </div>
                   <div className="field">
                     <label htmlFor="reset-new-pass">New password (min 8 chars)</label>
@@ -525,10 +536,11 @@ function LoginFormContent() {
                       minLength={8}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new strong password"
                     />
                   </div>
                   <button className="btn btn-primary btn-block" type="submit" disabled={loading}>
-                    {loading ? 'Resetting password...' : 'Reset password & Sign in'}
+                    {loading ? 'Verifying code...' : 'Verify Code & Reset Password'}
                   </button>
                 </form>
               )}

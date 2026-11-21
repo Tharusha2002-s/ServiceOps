@@ -19,19 +19,45 @@ export class MailService {
   private readonly fromEmail: string;
   private readonly fromName: string;
   private readonly brevoApiKey?: string;
+  private readonly brevoSmtpKey?: string;
+  private readonly brevoSmtpLogin?: string;
   private readonly frontendUrl: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.brevoApiKey =
+    const rawKey = (
       this.configService.get<string>('BREVO_API_KEY') ||
       process.env.BREVO_API_KEY ||
-      '';
+      ''
+    ).trim();
+
+    this.brevoSmtpLogin = (
+      this.configService.get<string>('BREVO_SMTP_LOGIN') ||
+      this.configService.get<string>('BREVO_SMTP_USER') ||
+      process.env.BREVO_SMTP_LOGIN ||
+      process.env.BREVO_SMTP_USER ||
+      this.configService.get<string>('BREVO_SENDER_EMAIL') ||
+      process.env.BREVO_SENDER_EMAIL ||
+      ''
+    ).trim();
+
+    this.brevoSmtpKey = (
+      this.configService.get<string>('BREVO_SMTP_KEY') ||
+      process.env.BREVO_SMTP_KEY ||
+      (rawKey.startsWith('xsmtpsib-') ? rawKey : '')
+    ).trim();
+
+    // If raw key starts with xkeysib- or is a general API key, treat as REST API key
+    if (rawKey && !rawKey.startsWith('xsmtpsib-')) {
+      this.brevoApiKey = rawKey;
+    } else {
+      this.brevoApiKey = undefined;
+    }
 
     this.fromEmail =
       this.configService.get<string>('BREVO_SENDER_EMAIL') ||
       process.env.BREVO_SENDER_EMAIL ||
       this.configService.get<string>('smtp.from') ||
-      'no-reply@serviceops.local';
+      'supportserviceops@gmail.com';
 
     this.fromName =
       this.configService.get<string>('BREVO_SENDER_NAME') ||
@@ -43,29 +69,26 @@ export class MailService {
       process.env.FRONTEND_URL ||
       'http://localhost:3000';
 
-    const brevoSmtpUser =
-      this.configService.get<string>('BREVO_SMTP_USER') || process.env.BREVO_SMTP_USER;
-    const brevoSmtpKey =
-      this.configService.get<string>('BREVO_SMTP_KEY') || process.env.BREVO_SMTP_KEY;
-
-    if (this.brevoApiKey && this.brevoApiKey.trim().length > 0) {
+    if (this.brevoApiKey) {
       this.mode = 'brevo-api';
       this.transporter = nodemailer.createTransport({ jsonTransport: true });
-      this.logger.log(`MailService configured with Brevo (Sendinblue) Transactional REST API.`);
-    } else if (brevoSmtpUser && brevoSmtpKey) {
+      this.logger.log(`MailService configured with Brevo REST API (xkeysib key).`);
+    } else if (this.brevoSmtpKey && this.brevoSmtpLogin) {
       this.mode = 'brevo-smtp';
       this.transporter = nodemailer.createTransport({
         host: 'smtp-relay.brevo.com',
         port: 587,
         secure: false,
-        auth: { user: brevoSmtpUser, pass: brevoSmtpKey },
+        auth: { user: this.brevoSmtpLogin, pass: this.brevoSmtpKey },
       });
-      this.logger.log(`MailService configured with Brevo SMTP Relay (smtp-relay.brevo.com:587)`);
+      this.logger.log(
+        `MailService configured with Brevo SMTP Relay (smtp-relay.brevo.com:587) for login: ${this.brevoSmtpLogin}`,
+      );
     } else {
       this.mode = 'dev-json';
       this.transporter = nodemailer.createTransport({ jsonTransport: true });
       this.logger.log(
-        'MailService active in local simulation / dev-json capture mode. (Set BREVO_API_KEY in .env for live dispatch)',
+        'MailService active in local simulation / dev-json capture mode.',
       );
     }
   }
@@ -76,7 +99,7 @@ export class MailService {
   async sendEmail(
     payload: EmailSendPayload,
   ): Promise<{ messageId: string; mode: string }> {
-    // 1. Primary Brevo REST API Dispatch
+    // 1. Primary Brevo REST API Dispatch (for xkeysib keys)
     if (this.brevoApiKey && this.brevoApiKey.trim().length > 0) {
       try {
         const res = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -98,7 +121,9 @@ export class MailService {
               },
             ],
             subject: payload.subject,
-            htmlContent: payload.html || `<div style="font-family:sans-serif;line-height:1.6;color:#1c1915;">${payload.text.replace(/\n/g, '<br/>')}</div>`,
+            htmlContent:
+              payload.html ||
+              `<div style="font-family:sans-serif;line-height:1.6;color:#1c1915;">${payload.text.replace(/\n/g, '<br/>')}</div>`,
             textContent: payload.text,
           }),
         });
@@ -107,34 +132,48 @@ export class MailService {
           const data = (await res.json()) as { messageId?: string };
           const messageId = data.messageId || `brevo-${Date.now()}`;
           this.logger.log(
-            `[BREVO EMAIL SENT] messageId=${messageId} to=${payload.to} subject="${payload.subject}"`,
+            `[BREVO EMAIL SENT via API] messageId=${messageId} to=${payload.to} subject="${payload.subject}"`,
           );
           return { messageId, mode: 'brevo-api' };
         } else {
           const errText = await res.text();
           this.logger.warn(
-            `[BREVO API ERROR] (${res.status}): ${errText} — falling back to local mail logger`,
+            `[BREVO API ERROR] (${res.status}): ${errText} — attempting SMTP relay if configured`,
           );
         }
       } catch (err: any) {
-        this.logger.warn(`[BREVO API EXCEPTION] ${err?.message} — falling back to local transport`);
+        this.logger.warn(`[BREVO API EXCEPTION] ${err?.message} — attempting SMTP relay if configured`);
       }
     }
 
-    // 2. Brevo SMTP or standard SMTP Dispatch
-    if (this.mode === 'brevo-smtp') {
+    // 2. Brevo SMTP Relay Dispatch (for xsmtpsib keys)
+    if (this.brevoSmtpKey && this.brevoSmtpLogin) {
       try {
-        const info = await this.transporter.sendMail({
+        const smtpTransport =
+          this.mode === 'brevo-smtp'
+            ? this.transporter
+            : nodemailer.createTransport({
+                host: 'smtp-relay.brevo.com',
+                port: 587,
+                secure: false,
+                auth: { user: this.brevoSmtpLogin, pass: this.brevoSmtpKey },
+              });
+
+        const info = await smtpTransport.sendMail({
           from: `"${this.fromName}" <${this.fromEmail}>`,
           to: payload.to,
           subject: payload.subject,
           text: payload.text,
           html: payload.html,
         });
-        this.logger.log(`[BREVO SMTP SENT] messageId=${info.messageId} to=${payload.to}`);
+        this.logger.log(
+          `[BREVO EMAIL SENT via SMTP] messageId=${info.messageId} to=${payload.to} subject="${payload.subject}"`,
+        );
         return { messageId: info.messageId, mode: 'brevo-smtp' };
       } catch (err: any) {
-        this.logger.warn(`[BREVO SMTP FAILED] ${err?.message}`);
+        this.logger.warn(
+          `[BREVO SMTP FAILED] ${err?.message}. Note: Brevo requires the specific SMTP Login username shown in Brevo Dashboard -> Settings -> SMTP & API -> SMTP. Ensure BREVO_SMTP_LOGIN is set in backend/.env.`,
+        );
       }
     }
 
@@ -209,21 +248,25 @@ export class MailService {
   }
 
   /**
-   * Password Reset Email with clickable link and single-use token.
+   * Password Reset Email with clickable link and 6-digit verification code.
    */
-  async sendPasswordResetEmail(to: string, recipientName: string, resetToken: string) {
-    const resetUrl = `${this.frontendUrl}/login?mode=reset&token=${encodeURIComponent(resetToken)}&email=${encodeURIComponent(to)}`;
-    const subject = 'ServiceOps — Password Reset Request';
-    const text = `Hello ${recipientName},\n\nA password reset was requested for your account (${to}).\n\nClick the link below or paste your single-use reset token:\n${resetUrl}\n\nToken: ${resetToken}\n\nThis token will expire in 30 minutes. If you did not request this, please disregard this email.`;
+  async sendPasswordResetEmail(to: string, recipientName: string, resetCode: string) {
+    const resetUrl = `${this.frontendUrl}/login?mode=reset&code=${encodeURIComponent(resetCode)}&email=${encodeURIComponent(to)}`;
+    const subject = 'ServiceOps — Password Reset Verification Code';
+    const text = `Hello ${recipientName},\n\nA password reset was requested for your account (${to}).\n\nYour 6-digit verification code is:\n\n${resetCode}\n\nEnter this code on the password reset screen or click the link below:\n${resetUrl}\n\nThis verification code will expire in 30 minutes. If you did not request this, please disregard this email.`;
 
     const html = this.wrapEmailHtml(
-      'Password Reset Request',
+      'Password Reset Verification Code',
       `<p>Hello <strong>${recipientName}</strong>,</p>
        <p>We received a request to reset the password for your ServiceOps account (<code>${to}</code>).</p>
-       <p>Click the button below to choose a new password. The reset link is single-use and will expire in <strong>30 minutes</strong>.</p>
-       <div class="token-box">Reset Token: ${resetToken}</div>
+       <p>Use the 6-digit verification code below to set a new password:</p>
+       <div style="background: #fbf9f4; border: 2px dashed #8e3f1e; border-radius: 10px; padding: 20px 24px; text-align: center; margin: 24px 0;">
+         <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #6f685e; display: block; margin-bottom: 8px;">6-Digit Verification Code</span>
+         <span style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #8e3f1e;">${resetCode}</span>
+       </div>
+       <p>This verification code is valid for <strong>30 minutes</strong>.</p>
        <p style="font-size: 13px; color: #6f685e;">If you did not request a password reset, no action is required and your account remains secure.</p>`,
-      { text: 'Reset Password', url: resetUrl },
+      { text: 'Verify Code & Reset Password', url: resetUrl },
     );
 
     return this.sendEmail({ to, name: recipientName, subject, text, html });

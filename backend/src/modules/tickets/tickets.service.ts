@@ -180,7 +180,7 @@ export class TicketsService {
       linkUrl: `/dashboard?ticket=${ticket.id}`,
     });
 
-    void this.notificationsService.notifyRoles([RoleName.IT_MANAGER], {
+    void this.notificationsService.notifyRoles([RoleName.SYSTEM_ADMINISTRATOR, RoleName.IT_MANAGER], {
       actorId: requesterId,
       type: NotificationType.TICKET_CREATED,
       title: `New ticket ${ticket.ticketNumber} (${sla.priority})`,

@@ -398,6 +398,10 @@ export class AuthService {
     );
 
     // Notify all System Administrators that a new account is awaiting review
+    const adminNotificationEmail =
+      this.configService.get<string>('ADMIN_NOTIFICATION_EMAIL') ||
+      process.env.ADMIN_NOTIFICATION_EMAIL;
+
     const admins = await this.prisma.user.findMany({
       where: {
         status: UserStatus.ACTIVE,
@@ -408,9 +412,17 @@ export class AuthService {
       select: { email: true },
     });
 
-    if (admins.length > 0) {
+    const adminEmailSet = new Set<string>();
+    if (adminNotificationEmail) adminEmailSet.add(adminNotificationEmail);
+    admins.forEach((a) => {
+      if (a.email && !a.email.endsWith('.local')) {
+        adminEmailSet.add(a.email);
+      }
+    });
+
+    if (adminEmailSet.size > 0) {
       void this.mailService.sendRegistrationAdminAlertEmail(
-        admins.map((a) => a.email),
+        Array.from(adminEmailSet),
         {
           firstName: user.firstName,
           lastName: user.lastName,
@@ -435,15 +447,16 @@ export class AuthService {
   }
 
   /**
-   * Issues a single-use cryptographic password reset token without leaking email existence (FR-AUTH-008).
+   * Issues a 6-digit verification code for password reset without leaking email existence (FR-AUTH-008).
    */
   async requestPasswordReset(email: string) {
     const normalized = email.toLowerCase().trim();
     const user = await this.prisma.user.findUnique({ where: { email: normalized } });
 
     if (user && user.status !== UserStatus.DEACTIVATED) {
-      const rawToken = crypto.randomBytes(32).toString('hex');
-      const tokenHash = this.hashToken(rawToken);
+      // Generate clean 6-digit numeric verification code (e.g. "492018")
+      const resetCode = Math.floor(100000 + crypto.randomInt(900000)).toString();
+      const tokenHash = this.hashToken(resetCode);
       const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
       await this.prisma.$transaction([
@@ -460,22 +473,20 @@ export class AuthService {
         }),
       ]);
 
-      // Dispatch Brevo email with password reset link and single-use token
+      // Dispatch Brevo email with 6-digit verification code and clickable reset link
       void this.mailService.sendPasswordResetEmail(
         user.email,
         `${user.firstName} ${user.lastName}`,
-        rawToken,
+        resetCode,
       );
 
-      if (this.configService.get<string>('nodeEnv') !== 'production') {
-        this.logger.log(
-          `[DEV PASSWORD RESET] Issued single-use reset token for ${normalized}: ${rawToken}`,
-        );
-      }
+      this.logger.log(
+        `[PASSWORD RESET CODE] Issued 6-digit verification code for ${normalized}: ${resetCode}`,
+      );
     }
 
     return {
-      message: 'If an active account exists for that email, reset instructions have been issued.',
+      message: 'If an active account exists for that email, a 6-digit reset code has been dispatched.',
     };
   }
 

@@ -168,11 +168,8 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     const createdNotifications = [];
 
     for (const recipient of recipients) {
-      // Exclude SYSTEM_ADMINISTRATOR from receiving email notifications (per business requirement)
-      const isAdmin = recipient.userRoles?.some(
-        (ur) => ur.role?.name === RoleName.SYSTEM_ADMINISTRATOR,
-      );
-      const sendEmail = !isAdmin && params.sendEmail !== false;
+      // Send email notifications to all recipients including administrators for new requests and alerts
+      const sendEmail = params.sendEmail !== false;
       const now = new Date();
 
       const notification = await this.prisma.notification.create({
@@ -220,9 +217,17 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
           (d) => d.channel === NotificationChannel.EMAIL,
         );
         if (emailDelivery) {
+          const adminNotificationEmail =
+            process.env.ADMIN_NOTIFICATION_EMAIL ||
+            this.configService.get<string>('ADMIN_NOTIFICATION_EMAIL');
+          const targetEmail =
+            recipient.email.endsWith('.local') && adminNotificationEmail
+              ? adminNotificationEmail
+              : recipient.email;
+
           await this.enqueueEmail({
             deliveryId: emailDelivery.id,
-            recipientEmail: recipient.email,
+            recipientEmail: targetEmail,
             recipientName: `${recipient.firstName} ${recipient.lastName}`.trim(),
             title: params.title,
             message: params.message,
