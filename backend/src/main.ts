@@ -71,7 +71,7 @@ async function bootstrap() {
     },
   });
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   logger.log(`🚀 ServiceOps Backend Engine is active on port: ${port}`);
   logger.log(`📚 OpenAPI Documentation available at: http://localhost:${port}/docs`);
 }

@@ -24,7 +24,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-RUN apk add --no-cache curl openssl
+RUN apk add --no-cache curl openssl netcat-openbsd
 
 COPY package*.json ./
 RUN npm ci --only=production
@@ -32,11 +32,16 @@ RUN npm ci --only=production
 COPY prisma ./prisma/
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/ts-node ./node_modules/ts-node
+COPY --from=builder /app/node_modules/typescript ./node_modules/typescript
 COPY --from=builder /app/dist ./dist
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 
 RUN mkdir -p /app/uploads
 
 EXPOSE 4000
 
+ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["node", "dist/main"]
-
