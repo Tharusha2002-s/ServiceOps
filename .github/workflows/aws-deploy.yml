@@ -1,0 +1,166 @@
+name: ServiceOps AWS CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_BACKEND_REPO: serviceops-backend
+  ECR_FRONTEND_REPO: serviceops-frontend
+  ECS_CLUSTER: serviceops-prod-cluster
+  ECS_BACKEND_SERVICE: serviceops-backend-service
+  ECS_FRONTEND_SERVICE: serviceops-frontend-service
+
+jobs:
+  # ============================================================================
+  # STAGE 1: Build & Test (Verification Gate)
+  # ============================================================================
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpassword123
+          POSTGRES_DB: serviceops_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:testpassword123@localhost:5432/serviceops_test?schema=public
+      JWT_ACCESS_SECRET: test_jwt_access_secret_serviceops_32_chars_minimum
+      JWT_REFRESH_SECRET: test_jwt_refresh_secret_serviceops_32_chars_minimum
+      COOKIE_SECRET: test_cookie_secret_serviceops_2026
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Push Prisma Schema & Run Backend Tests
+        working-directory: backend
+        run: |
+          npx prisma generate
+          npx prisma db push --skip-generate
+          npm test
+
+      - name: Verify Backend Build
+        working-directory: backend
+        run: npm run build
+
+      - name: Install Frontend Dependencies & Verify Build
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: /api/v1
+        run: |
+          npm ci
+          npm run build
+
+  # ============================================================================
+  # STAGE 2: Build Docker Image, Push to Amazon ECR & Deploy to AWS
+  # ============================================================================
+  deploy:
+    name: Build, Push to ECR & Deploy to AWS
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, Tag & Push Backend Docker Image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            -t $ECR_REGISTRY/$ECR_BACKEND_REPO:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_BACKEND_REPO:latest \
+            -f backend/Dockerfile backend/
+
+          docker push $ECR_REGISTRY/$ECR_BACKEND_REPO:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_BACKEND_REPO:latest
+
+      - name: Build, Tag & Push Frontend Docker Image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            -t $ECR_REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_FRONTEND_REPO:latest \
+            -f frontend/Dockerfile frontend/
+
+          docker push $ECR_REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_FRONTEND_REPO:latest
+
+      # ------------------------------------------------------------------------
+      # DEPLOY TARGET A: Amazon ECS Fargate (Serverless Rolling Deployment)
+      # ------------------------------------------------------------------------
+      - name: Deploy to Amazon ECS (Force New Deployment)
+        run: |
+          echo "Triggering ECS Rolling Deployment..."
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_BACKEND_SERVICE \
+            --force-new-deployment \
+            --region $AWS_REGION || echo "Notice: ECS cluster not yet active. Skipping ECS update."
+
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_FRONTEND_SERVICE \
+            --force-new-deployment \
+            --region $AWS_REGION || echo "Notice: ECS cluster not yet active. Skipping ECS update."
+
+      # ------------------------------------------------------------------------
+      # DEPLOY TARGET B (Alternative): Deploy to AWS EC2 via SSH
+      # Only runs if EC2_HOST and EC2_SSH_KEY are configured in GitHub Secrets
+      # ------------------------------------------------------------------------
+      - name: Deploy to AWS EC2 (if EC2 Secret Configured)
+        if: env.EC2_HOST != '' && env.EC2_SSH_KEY != ''
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ubuntu
+          key: ${{ env.EC2_SSH_KEY }}
+          script: |
+            cd /opt/serviceops
+            aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_BACKEND_REPO }}:latest
+            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_FRONTEND_REPO }}:latest
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -f
