@@ -169,6 +169,33 @@ async function main() {
   });
   console.log('Single System Administrator user established: admin@serviceops.local');
 
+  // Also establish admin@serviceops.com for production access
+  const comPasswordHash = await argon2.hash('Admin@123', {
+    type: argon2.argon2id,
+    memoryCost: 65536,
+    timeCost: 3,
+    parallelism: 1,
+  });
+  const comAdminUser = await prisma.user.upsert({
+    where: { email: 'admin@serviceops.com' },
+    update: { passwordHash: comPasswordHash, status: UserStatus.ACTIVE },
+    create: {
+      email: 'admin@serviceops.com',
+      passwordHash: comPasswordHash,
+      firstName: 'System',
+      lastName: 'Administrator',
+      department: 'IT Administration',
+      jobTitle: 'Principal Systems Administrator',
+      status: UserStatus.ACTIVE,
+    },
+  });
+  await prisma.userRole.upsert({
+    where: { userId_roleId: { userId: comAdminUser.id, roleId: adminRoleId } },
+    update: {},
+    create: { userId: comAdminUser.id, roleId: adminRoleId },
+  });
+  console.log('Production System Administrator user established: admin@serviceops.com');
+
   // 5. Seed Core Categories (Hardware, Access, Software, Network, Workplace, Security)
   const categoriesData = [
     { name: 'Hardware', code: 'HW', icon: '💻', description: 'Laptops, docks, screens, peripherals' },

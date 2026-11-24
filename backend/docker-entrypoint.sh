@@ -24,6 +24,7 @@ echo "[ServiceOps Entrypoint] PostgreSQL is ready!"
 
 # 2. Synchronize database schema via Prisma
 echo "[ServiceOps Entrypoint] Applying Prisma database schema..."
+npx prisma generate
 npx prisma db push --skip-generate
 
 # 3. Check if database is seeded, if not run initial seed
@@ -54,5 +55,9 @@ check();
 echo "========================================================"
 echo "    ServiceOps Engine Ready — Launching Server         "
 echo "========================================================"
+
+if [ "$1" = "node" ] && [ "$2" = "dist/main" ] && [ ! -f "dist/main.js" ] && [ -f "dist/src/main.js" ]; then
+  set -- node dist/src/main.js
+fi
 
 exec "$@"

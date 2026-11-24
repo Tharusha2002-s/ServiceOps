@@ -44,4 +44,4 @@ RUN mkdir -p /app/uploads
 EXPOSE 4000
 
 ENTRYPOINT ["./docker-entrypoint.sh"]
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main"]
