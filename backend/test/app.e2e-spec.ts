@@ -35,7 +35,7 @@ describe('ServiceOps Enterprise ITSM API (Supertest E2E + OWASP Security)', () =
     const testEmpEmail = `test.employee.${Date.now()}@serviceops.local`;
 
     // Register test employee account
-    await request(app.getHttpServer())
+    const registration = await request(app.getHttpServer())
       .post('/api/v1/auth/register')
       .send({
         email: testEmpEmail,
@@ -46,17 +46,28 @@ describe('ServiceOps Enterprise ITSM API (Supertest E2E + OWASP Security)', () =
       })
       .expect(201);
 
-    const empLogin = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ email: testEmpEmail, password: 'Password@123' })
-      .expect(200);
-    empToken = empLogin.body.data.accessToken;
+      .expect(401);
 
     const adminLogin = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ email: 'admin@serviceops.local', password: 'Password@123' })
       .expect(200);
     adminToken = adminLogin.body.data.accessToken;
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/users/${registration.body.data.id}/status`)
+      .set('Authorization', 'Bearer ' + adminToken)
+      .send({ status: 'ACTIVE' })
+      .expect(200);
+
+    const empLogin = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: testEmpEmail, password: 'Password@123' })
+      .expect(200);
+    empToken = empLogin.body.data.accessToken;
   });
 
   afterAll(async () => {
