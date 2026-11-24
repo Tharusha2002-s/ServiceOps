@@ -4,14 +4,13 @@
 
 ![ServiceOps Logo](frontend/public/logo.png)
 
-**Next-Generation IT Service Management, SLA Automation & Incident War Room Platform**
+**Next-Generation Enterprise IT Service Management, SLA Automation & Incident War Room Platform**
 
 [![CI/CD Pipeline](https://img.shields.io/badge/CI%2FCD-Passing-10b981.svg)](.github/workflows/ci.yml)
 [![QA Test Coverage](https://img.shields.io/badge/QA%20Tests-124%2F124%20Passed-10b981.svg)](docs/ServiceOps_Software_Requirements_Specification_SRS.md)
 [![Architecture](https://img.shields.io/badge/Architecture-Modular%20Monolith-blue.svg)](docs/ServiceOps_Project_Proposal.md)
-[![Standard](https://img.shields.io/badge/Compliance-IEEE%20830%20%2F%20ITIL%20v4-6366f1.svg)](docs/ServiceOps_Software_Requirements_Specification_SRS.md)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ed.svg)](docker-compose.yml)
-[![License](https://img.shields.io/badge/License-Enterprise%20Ready-slate.svg)](LICENSE)
+[![Compliance](https://img.shields.io/badge/Compliance-IEEE%20830%20%2F%20ITIL%20v4-6366f1.svg)](docs/ServiceOps_Software_Requirements_Specification_SRS.md)
+[![Cloud](https://img.shields.io/badge/Deployment-Amazon%20Web%20Services%20(AWS)-orange.svg)](docs/ServiceOps_AWS_Production_Deployment_Guide.md)
 
 </div>
 
@@ -19,7 +18,7 @@
 
 ## 🌟 Overview
 
-**ServiceOps** is an open-source, production-grade IT Service Management (ITSM) and Enterprise Operations platform. Engineered as a high-performance alternative to legacy platforms like ServiceNow and Jira Service Management, ServiceOps unifies employee self-service, IT triage queues, SLA breach prevention, Configuration Management (CMDB), Major Incident War Rooms, and a cryptographic tamper-evident audit ledger into a single cohesive system.
+**ServiceOps** is a proprietary enterprise-grade IT Service Management (ITSM) and Incident Command platform designed for deployment exclusively on **Amazon Web Services (AWS)**. Engineered as a high-performance, modern alternative to legacy systems, ServiceOps unifies employee self-service, IT triage queues, SLA breach prevention, Configuration Management (CMDB), Major Incident War Rooms, and a cryptographic tamper-evident audit ledger into a single cohesive cloud solution.
 
 ---
 
@@ -35,27 +34,26 @@
 
 ---
 
-## 🚀 60-Second Quickstart (Docker)
+## ☁️ Production Deployment on Amazon Web Services (AWS)
 
-Anyone can spin up the full ServiceOps platform with a single command.
+ServiceOps is engineered for multi-AZ deployment on AWS with zero server management:
 
-### macOS & Linux
-```bash
-git clone https://github.com/your-org/ServiceOps.git
-cd ServiceOps
-chmod +x setup.sh
-./setup.sh
-```
+### 1. Enterprise Serverless Stack (AWS ECS Fargate + Amazon RDS)
+- **Infrastructure as Code:** Provision the complete Multi-AZ VPC, Application Load Balancer, Amazon RDS PostgreSQL 16, and Amazon ECR registries using [`infra/aws/cloudformation.yml`](file:///d:/Project/ServiceOps/infra/aws/cloudformation.yml):
+  ```bash
+  aws cloudformation deploy \
+    --template-file infra/aws/cloudformation.yml \
+    --stack-name serviceops-prod \
+    --parameter-overrides EnvironmentName=serviceops-prod DBUsername=serviceopsadmin DBPassword=YourPassword123! \
+    --capabilities CAPABILITY_NAMED_IAM
+  ```
+- **Automated Container Push:** Build and push Docker images to Amazon ECR and trigger an ECS rolling deployment using [`deploy-aws.sh`](file:///d:/Project/ServiceOps/deploy-aws.sh):
+  ```bash
+  ./deploy-aws.sh
+  ```
 
-### Windows
-Double-click `setup.bat` or run:
-```cmd
-git clone https://github.com/your-org/ServiceOps.git
-cd ServiceOps
-setup.bat
-```
-
-The script will automatically configure your `.env`, initialize PostgreSQL and Redis, run schema migrations, seed test data, and launch the web portal at **http://localhost:3000**.
+### 2. Cost-Optimized Single EC2 Instance
+- Spin up an Amazon EC2 instance (`t3.medium`, Ubuntu 22.04 LTS) and paste [`infra/aws/ec2-user-data.sh`](file:///d:/Project/ServiceOps/infra/aws/ec2-user-data.sh) into the User Data field for zero-touch automated launch.
 
 ---
 
@@ -70,7 +68,7 @@ The script will automatically configure your `.env`, initialize PostgreSQL and R
 
 ---
 
-## 💻 Local Development Setup (Without Docker)
+## 💻 Local Development Setup
 
 ### Prerequisites
 - Node.js 20 LTS or higher
@@ -140,10 +138,11 @@ npm run dev
 
 ## 📚 Documentation & Specifications
 
-- 📘 [Production Deployment & DevOps Manual](DEPLOYMENT.md) — VPS provisioning, Nginx, Let's Encrypt SSL, and automated backups.
-- 🏢 [SaaS Multi-Tenant Architecture Transformation Guide](docs/ServiceOps_SaaS_Architecture_Transformation_Guide.md) — Blueprint for converting ServiceOps into a commercial B2B SaaS platform.
-- 📄 [Software Requirements Specification (IEEE 830 SRS)](docs/ServiceOps_Software_Requirements_Specification_SRS.md) — Complete requirements specification with Requirements Traceability Matrix.
-- 💼 [Project Proposal & Executive ROI Blueprint](docs/ServiceOps_Project_Proposal.md) — Business case, technical roadmap, and cost-benefit analysis.
+- ☁️ [AWS Production Deployment Guide](docs/ServiceOps_AWS_Production_Deployment_Guide.md) — Complete AWS ECS Fargate, ALB, Route 53, and RDS deployment manual.
+- 🏢 [SaaS Multi-Tenant Architecture Transformation Guide](docs/ServiceOps_SaaS_Architecture_Transformation_Guide.md) — Blueprint for converting ServiceOps into a commercial B2B SaaS platform on AWS.
+- 📘 [Infrastructure & Operations Manual](DEPLOYMENT.md) — Cloud operations, security controls, and disaster recovery.
+- 📄 [Software Requirements Specification (IEEE 830 SRS)](docs/ServiceOps_Software_Requirements_Specification_SRS.md) — Complete requirements specification with Requirements Traceability Matrix (124/124 tests passed).
+- 💼 [Project Proposal & Executive Blueprint](docs/ServiceOps_Project_Proposal.md) — Business case, technical roadmap, and cost-benefit analysis.
 
 ---
 

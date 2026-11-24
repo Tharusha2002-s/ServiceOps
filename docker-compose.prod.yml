@@ -3,11 +3,15 @@
 
 services:
   backend:
+    image: ${BACKEND_IMAGE:-serviceops-backend:latest}
     environment:
       REDIS_ENABLED: "true"
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
     volumes:
       - uploads_data:/app/uploads
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-serviceops-frontend:latest}
 
   nginx:
     image: nginx:1.27-alpine

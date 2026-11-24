@@ -1,186 +1,146 @@
-# ServiceOps — Enterprise DevOps Deployment & Infrastructure Guide
+# ServiceOps — Enterprise AWS DevOps Deployment & Infrastructure Guide
 
-This guide provides end-to-end instructions for deploying, managing, and scaling the **ServiceOps Enterprise IT Service Management Platform** across bare-metal servers, Linux Virtual Private Servers (VPS), Docker environments, and cloud platforms (Railway, Render, AWS, DigitalOcean).
+This guide provides end-to-end instructions for deploying, managing, and scaling the **ServiceOps Enterprise IT Service Management Platform** exclusively on **Amazon Web Services (AWS)** using production-grade container orchestration (AWS ECS Fargate, Amazon ECR, Amazon RDS PostgreSQL, Application Load Balancers, and AWS Route 53).
 
 ---
 
-## 1. System Architecture & Topology
+## 1. Cloud Architecture & AWS Topology
 
-ServiceOps is built as an enterprise-grade modular monolith with full container orchestration:
+ServiceOps on AWS utilizes managed multi-AZ services for high availability, zero server maintenance, and automated scaling:
 
 ```
-                                  [ Internet / Clients ]
-                                             |
-                                             v
-                            +---------------------------------+
-                            |       Nginx Reverse Proxy       |
-                            |  Ports: 80 (HTTP) / 443 (HTTPS) |
-                            +---------------------------------+
-                                      |              |
-                      /api/ & /socket.io/            | (All other routes)
-                                      v              v
-               +---------------------------+   +---------------------------+
-               |  ServiceOps Core Engine   |   |   ServiceOps Web Portal   |
-               |     (NestJS API @ 4000)   |   |    (Next.js App @ 3000)   |
-               +---------------------------+   +---------------------------+
-                             |       |
-                 +-----------+       +-----------+
-                 v                               v
-   +---------------------------+   +---------------------------+
-   |   PostgreSQL 16 Database  |   |    Redis 7 Broker & Cache |
-   |        (Port 5432)        |   |        (Port 6379)        |
-   +---------------------------+   +---------------------------+
-                 |
-   +---------------------------+
-   |   Prometheus & Grafana    |
-   | (Metrics & Observability) |
-   +---------------------------+
+                                 [ End Users / Clients ]
+                                            │
+                                            ▼
+                           +---------------------------------+
+                           │       Amazon Route 53 (DNS)     │
+                           +---------------------------------+
+                                            │
+                                            ▼
+                           +---------------------------------+
+                           │ AWS Certificate Manager (HTTPS) │
+                           +---------------------------------+
+                                            │
+                                            ▼
+                  +-----------------------------------------------------+
+                  │      AWS Application Load Balancer (ALB)            │
+                  │             (Public Multi-AZ Subnets)               │
+                  +-----------------------------------------------------+
+                            │                               │
+            Path: /api/*, /socket.io/*                      │ Path: /* (UI)
+                            ▼                               ▼
+       +------------------------------------+  +------------------------------------+
+       │     ServiceOps Backend Service     │  │    ServiceOps Frontend Service     │
+       │       (AWS ECS Fargate Tasks)      │  │      (AWS ECS Fargate Tasks)       │
+       │       Private App Subnets (AZ A/B) │  │      Private App Subnets (AZ A/B)  │
+       +------------------------------------+  +------------------------------------+
+                         │                                       │
+                         +-------------------+-------------------+
+                                             │
+                                             ▼
+                 +-----------------------------------------------------+
+                 │           Amazon RDS PostgreSQL 16 DB               │
+                 │             (Private DB Subnets Multi-AZ)           │
+                 +-----------------------------------------------------+
 ```
 
-### Network Port Allocation
+### AWS Port & Security Group Rules
 
-| Port | Service | Scope | Protocol |
+| Port | Service | Source | Destination |
 | :--- | :--- | :--- | :--- |
-| **80** | Nginx HTTP | Public | HTTP (Redirects to 443) |
-| **443** | Nginx HTTPS / TLS | Public | HTTPS / WSS |
-| **3000** | Next.js Frontend UI | Internal Bridge | HTTP |
-| **4000** | NestJS Backend API & Sockets | Internal Bridge | HTTP / Socket.io |
-| **5432** | PostgreSQL 16 | Internal Bridge | TCP |
-| **6379** | Redis 7 | Internal Bridge | TCP |
-| **3001** | Grafana Dashboard | Private / Admin | HTTP |
-| **9090** | Prometheus Metrics Engine | Private | HTTP |
+| **80** | ALB HTTP | `0.0.0.0/0` | Redirects to HTTPS 443 |
+| **443** | ALB HTTPS | `0.0.0.0/0` | SSL Termination via ACM |
+| **3000** | ECS Frontend | ALB Security Group | Next.js Container |
+| **4000** | ECS Backend API | ALB Security Group | NestJS Core Container |
+| **5432** | RDS PostgreSQL | ECS Security Group | Amazon RDS PostgreSQL |
+| **6379** | ElastiCache Redis | ECS Security Group | Amazon ElastiCache |
 
 ---
 
-## 2. 60-Second Quickstart (Self-Hosted Community Edition)
+## 2. Option A: Enterprise Serverless Deployment (AWS ECS Fargate + RDS)
 
-Anyone can run ServiceOps locally or on a private server with a single command.
+### Step 1: Provision CloudFormation Stack
+Use the comprehensive CloudFormation template located at [`infra/aws/cloudformation.yml`](file:///d:/Project/ServiceOps/infra/aws/cloudformation.yml):
 
-### Prerequisites
-- [Docker](https://docs.docker.com/get-docker/) & Docker Compose v2.20+
-- Git
-
-### Linux / macOS:
 ```bash
-# 1. Clone repository
-git clone https://github.com/your-org/ServiceOps.git
-cd ServiceOps
-
-# 2. Run the 1-click turnkey setup script
-chmod +x setup.sh
-./setup.sh
+aws cloudformation deploy \
+  --template-file infra/aws/cloudformation.yml \
+  --stack-name serviceops-prod \
+  --parameter-overrides \
+      EnvironmentName=serviceops-prod \
+      DBUsername=serviceopsadmin \
+      DBPassword=YourStrongMasterPassword123! \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --region us-east-1
 ```
 
-### Windows:
-Double-click `setup.bat` or run in PowerShell / Command Prompt:
-```cmd
-git clone https://github.com/your-org/ServiceOps.git
-cd ServiceOps
-setup.bat
+### Step 2: Store Production Secrets in AWS Secrets Manager
+```bash
+# Database connection string
+aws secretsmanager create-secret \
+  --name serviceops/prod/DATABASE_URL \
+  --secret-string "postgresql://serviceopsadmin:YourStrongMasterPassword123!@<RDS-Endpoint>:5432/serviceops_db?schema=public"
+
+# Cryptographic token secrets
+aws secretsmanager create-secret \
+  --name serviceops/prod/JWT_ACCESS_SECRET \
+  --secret-string "$(openssl rand -hex 32)"
+
+aws secretsmanager create-secret \
+  --name serviceops/prod/JWT_REFRESH_SECRET \
+  --secret-string "$(openssl rand -hex 32)"
+
+aws secretsmanager create-secret \
+  --name serviceops/prod/COOKIE_SECRET \
+  --secret-string "$(openssl rand -hex 32)"
+
+# Brevo transactional email
+aws secretsmanager create-secret \
+  --name serviceops/prod/BREVO_API_KEY \
+  --secret-string "xkeysib-your-production-brevo-api-key"
 ```
 
-The script will automatically:
-1. Verify Docker installation.
-2. Generate a secure `.env` file from `.env.example` with cryptographically random secrets.
-3. Build and launch all containers (`PostgreSQL`, `Redis`, `Backend`, `Frontend`).
-4. Apply Prisma database schema migrations and seed default administrative accounts.
+### Step 3: Automated Build & ECR Push
+Run the AWS deployment pipeline script [`deploy-aws.sh`](file:///d:/Project/ServiceOps/deploy-aws.sh):
+```bash
+chmod +x deploy-aws.sh
+./deploy-aws.sh
+```
+
+This builds `linux/amd64` images, pushes them to Amazon ECR, and automatically triggers an ECS rolling service update.
 
 ---
 
-## 3. Production Deployment on Linux VPS (Ubuntu 22.04 LTS / Debian 12)
+## 3. Option B: Cost-Optimized Single EC2 Instance Deployment
 
-Follow these steps to deploy ServiceOps onto a production cloud virtual machine (AWS EC2, DigitalOcean Droplet, Hetzner, Linode).
+For startup or development environments seeking low AWS expenditure (~$25–$45/month):
 
-### Step 1: Server Provisioning & Firewall Configuration
-```bash
-# Update server packages
-sudo apt update && sudo apt upgrade -y
-
-# Install Docker & Docker Compose
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
-
-# Configure UFW Firewall
-sudo ufw default deny incoming
-sudo ufw default allow outgoing
-sudo ufw allow ssh
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw --force enable
-```
-
-### Step 2: Clone & Configure Environment
-```bash
-git clone https://github.com/your-org/ServiceOps.git /opt/serviceops
-cd /opt/serviceops
-
-# Copy master environment template
-cp .env.example .env
-
-# Generate secure production secrets
-sed -i "s/prod_access_secret_serviceops_minimum_32_characters_random_hex/$(openssl rand -hex 32)/g" .env
-sed -i "s/prod_refresh_secret_serviceops_minimum_32_characters_random_hex/$(openssl rand -hex 32)/g" .env
-sed -i "s/prod_cookie_signing_secret_serviceops_2026_super_secure/$(openssl rand -hex 32)/g" .env
-sed -i "s/postgres123/$(openssl rand -hex 16)/g" .env
-
-# Edit domain and email credentials
-nano .env
-```
-Ensure you update:
-- `DOMAIN_NAME`: your public domain (e.g. `serviceops.yourcompany.com`)
-- `BREVO_API_KEY`: your Brevo transactional API key (`xkeysib-...`)
-- `ADMIN_NOTIFICATION_EMAIL`: IT administrator notification inbox
-
-### Step 3: Run the Automated Deployment Engine
-```bash
-chmod +x deploy.sh scripts/*.sh
-./deploy.sh
-```
-
-The script builds production containers, launches the full stack with Nginx, verifies backend liveness, and configures an automated daily database backup cron job at 02:00 AM.
-
-### Step 4: SSL/TLS Certificate Provisioning (Let's Encrypt)
-To enable HTTPS with free Let's Encrypt certificates:
-```bash
-# Install Certbot
-sudo apt install certbot -y
-
-# Obtain certificate in standalone mode (temporarily stop Nginx container if on port 80)
-docker compose stop nginx
-sudo certbot certonly --standalone -d serviceops.yourcompany.com
-
-# Mount certificates into Nginx
-sudo mkdir -p /opt/serviceops/infra/nginx/certs
-sudo cp /etc/letsencrypt/live/serviceops.yourcompany.com/fullchain.pem /opt/serviceops/infra/nginx/certs/
-sudo cp /etc/letsencrypt/live/serviceops.yourcompany.com/privkey.pem /opt/serviceops/infra/nginx/certs/
-
-# Restart Nginx
-docker compose up -d nginx
-```
+1. **Launch EC2 Instance:**
+   - **AMI:** Ubuntu Server 22.04 LTS (HVM)
+   - **Instance Type:** `t3.medium` (2 vCPU, 4 GiB RAM)
+   - **Storage:** 30 GiB gp3
+   - **Security Group:** Inbound ports `80` (HTTP), `443` (HTTPS), `22` (SSH from your IP).
+2. **User Data (Automated Launch):**
+   - Under **Advanced Details** &rarr; **User Data**, paste the contents of [`infra/aws/ec2-user-data.sh`](file:///d:/Project/ServiceOps/infra/aws/ec2-user-data.sh).
+3. The instance will automatically boot, install Docker, clone your repository, generate cryptographic secrets, run schema migrations, and launch ServiceOps behind Nginx with automated 02:00 AM database backups.
 
 ---
 
-## 4. Cloud Platform (PaaS) Deployments
+## 4. Monitoring, Health Probes & Observability
 
-### Deploying to Railway
-ServiceOps is ready for PaaS deployment with Railway:
-1. Create a new Railway project.
-2. Add a **PostgreSQL** database service.
-3. Add a **Redis** service.
-4. Deploy the **Backend**:
-   - Source: `/backend`
-   - Set environment variables (`DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `COOKIE_SECRET`, `BREVO_API_KEY`).
-   - Start Command: `npx prisma db push && node dist/main`
-5. Deploy the **Frontend**:
-   - Source: `/frontend`
-   - Set `NEXT_PUBLIC_API_URL` to your backend Railway domain.
+- **Liveness Probe:** `GET http://<ALB-DNS>/api/v1/health/liveness` &rarr; returns `{ status: "ok" }`.
+- **Database Readiness:** `GET http://<ALB-DNS>/api/v1/health` &rarr; validates PostgreSQL query and connection latency.
+- **Cryptographic Audit Verification:** `GET http://<ALB-DNS>/api/v1/audit/verify` &rarr; validates the entire SHA-256 block chain from `GENESIS`.
+- **CloudWatch Log Group:** `/ecs/serviceops-prod` for centralized log streaming and alarms.
 
 ---
 
-## 5. Automated Database Backups & Disaster Recovery
+## 5. Automated Backups & Disaster Recovery
 
-### Manual Backup
+### Amazon RDS Backups
+- Amazon RDS automatically creates daily system snapshots retained for 7 days, with Point-In-Time Restore (PITR) up to the last 5 minutes.
+
+### Manual / EC2 Backups
 ```bash
 ./scripts/backup-db.sh
 ```
@@ -193,17 +153,7 @@ This dumps the PostgreSQL database into `./backups/postgres/serviceops_db_<TIMES
 
 ---
 
-## 6. Enterprise Health Checks & Observability
-
-- **Liveness Probe:** `GET /api/v1/health/liveness` &rarr; returns `{ status: "ok" }`.
-- **Database Readiness:** `GET /api/v1/health` &rarr; tests PostgreSQL query and latency.
-- **Cryptographic Audit Ledger Verification:** `GET /api/v1/audit/verify` &rarr; validates the complete SHA-256 block chain from `GENESIS`.
-- **Prometheus Metrics:** Integrated scraping on port 9090.
-- **Grafana Dashboards:** Accessible at `http://your-server:3001` (Default user: `admin`).
-
----
-
-## 7. Default Seeded Enterprise Accounts
+## 6. Pre-Seeded Default Accounts
 
 | Persona / Role | Email Address | Password | Permissions |
 | :--- | :--- | :--- | :--- |

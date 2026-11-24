@@ -1,13 +1,13 @@
 # ServiceOps — SaaS Multi-Tenant Architecture & Commercialization Guide
-## Transforming an Enterprise Monolith into a Scalable B2B SaaS Platform
+## Transforming an Enterprise Monolith into a Scalable B2B SaaS Platform on AWS
 
 ---
 
 **Document Control:**
 - **Project:** ServiceOps Enterprise ITSM Platform
-- **Target Model:** Multi-Tenant Cloud SaaS + Open-Core Self-Hosted
+- **Target Model:** Proprietary Multi-Tenant Cloud SaaS on AWS
 - **Author:** DevOps & Cloud Solutions Architecture Team
-- **Version:** 1.0.0
+- **Version:** 2.0.0 (AWS Cloud Edition)
 - **Classification:** Strategic & Technical Architecture Roadmap
 
 ---
@@ -19,24 +19,24 @@ The Global IT Service Management (ITSM) market exceeds **$12 Billion**, currentl
 - **Jira Service Management:** $20–$55/agent/month with complex plugin ecosystems.
 - **Freshservice:** $19–$119/agent/month.
 
-### The Dual-Model Playbook: Open-Core + Multi-Tenant Cloud
-Following the proven playbooks of **GitLab, Supabase, Grafana Labs, PostHog, and Cal.com**, ServiceOps can dominate by operating under two complementary distribution channels:
-1. **ServiceOps Community (Self-Hosted):** Free, source-available, 1-command Docker deployment for privacy-sensitive enterprises, developers, and homelabs. Builds brand trust and developer adoption.
-2. **ServiceOps Cloud (Multi-Tenant SaaS):** Fully managed, zero-maintenance, multi-tenant cloud application with instant onboarding, automatic updates, and tiered seat-based monthly billing.
+### The Pure-Play Enterprise Cloud SaaS Model on AWS
+ServiceOps operates as a proprietary, centrally managed, multi-tenant B2B SaaS platform hosted entirely on Amazon Web Services (AWS). Rather than distributing downloadable software, ServiceOps delivers a fully managed cloud service with instant customer onboarding, automated multi-AZ scalability, zero customer maintenance, and tiered monthly subscriptions billed via Stripe.
 
 ```
                       +------------------------------------------+
-                      |         SERVICEOPS ECOSYSTEM             |
+                      |         SERVICEOPS AWS CLOUD SAAS        |
+                      |            (*.serviceops.io)             |
                       +------------------------------------------+
                                      /            \
                                     /              \
                                    v                v
             +---------------------------+   +---------------------------+
-            |  ServiceOps Self-Hosted   |   |   ServiceOps Cloud SaaS   |
-            |   (Docker / Bare Metal)   |   |     (*.serviceops.io)     |
-            |   • Free Community Tier   |   |   • Multi-Tenant Cloud    |
-            |   • Air-gapped on-prem    |   |   • Stripe Seat Billing   |
-            |   • 1-command quickstart  |   |   • Zero ops / Managed DB |
+            |    Standard SaaS Cloud    |   |  Enterprise Virtual Cloud |
+            |      (Shared Multi-AZ)    |   |     (Dedicated Amazon)    |
+            |   • Subdomain Workspaces  |   |   • Dedicated RDS Cluster |
+            |   • Logical Tenant RLS    |   |   • Custom Domain & SAML  |
+            |   • Stripe Seat Billing   |   |   • Strict Data Residency |
+            |   • AWS ECS Fargate Autos |   |   • 99.98% SLA Guarantee  |
             +---------------------------+   +---------------------------+
 ```
 
