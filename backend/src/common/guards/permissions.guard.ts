@@ -22,6 +22,11 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException('Access denied: User permissions could not be resolved');
     }
 
+    // System Administrator role implicitly possesses all granular permissions
+    if (user.roles && (user.roles.includes('SYSTEM_ADMINISTRATOR') || user.roles.includes('System Administrator'))) {
+      return true;
+    }
+
     // Must have ALL required permissions for the endpoint
     const hasAllPermissions = requiredPermissions.every((perm) =>
       user.permissions.includes(perm),
